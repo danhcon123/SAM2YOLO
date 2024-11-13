@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% block extra_head %}
+    <style>
+        /* Container to position the video and the spinner */
+        .video-container {
+            position: relative;/* Make the video container the reference point for the spinner */
+            width: 640px;
+            height: 480px;
+            margin: 0 auto; /* Center the video container on the page */
+        }
+        /* Video upload form and video player positioned 60px below header */
+        .video-section {
+            display: flex;
+            flex-direction: column;  /* Stack elements vertically */
+            justify-content: center;
+            align-items: center;
+            font-family: 'Arial', sans-serif;
+        }
+        /* Container for buttons and form */
+        .controls {
+            margin-top: 50px;
+            display: flex;
+            gap: 10px;  /* Add spacing between buttons */
+            justify-content: center;
+        }
+       
+        /* Video player styling */
+        video{
+            margin-top: 0px;
+            background-color: #000000;
+        }
+
+        /* Main layout: 2 sections side by side */
+        .container {
+            display: flex;
+            flex-direction: column; /* Stack items vertically */
+            align-items: center;    /* Center items horizontally */
+            justify-content: space-between;
+            padding: 10px;
+            box-sizing: border-box;
+            height: 90vh; /* Full height for scrolling */
+        }
+ 
+        /* Section 1 - Thumbnails (Left) */
+        .frame-section {
+            width: 100%; /* Same width as Section 2 */
+            background-color: #0097A7; /* Background color */
+            border: 4px solid #036975; /* Same border as Section 2 */
+            height: 100%; /* Take full height */
+            overflow-y: auto; /* Allows vertical scrolling */
+            padding: 10px;
+            box-sizing: border-box;
+            margin-top: 20px !important; /* Force 20px space below video */        
+        }
+
+ 
+        /* 4-column grid layout for thumbnails */
+        .frame-container {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr); /* 4 columns */
+            grid-gap: 10px; /* Space between thumbnails */
+        }
+ 
+        .frame-block {
+            text-align: center;
+            cursor: pointer;
+        }
+ 
+        .frame-block img {
+            max-width: 100%; /* Make image fit within the grid */
+            border: 2px solid transparent;
+            transition: border 0.2s;
+        }
+ 
+        /* Highlight the selected thumbnail */
+        .frame-block img:hover {
+            border: 4px solid white; /* White border for selected picture */
+        }
+
+        /* Popup styling */
+        .image-popup {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8); /* Dark background with opacity */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 10px; /* Add padding for extra spacing from edges */
+        }
+
+        .image-popup {
+            transition: opacity 0.3s ease-in-out;
+        }
+        
+        .popup-content {
+            position: relative;
+            display: flex;                /* Flexbox to align content */
+            flex-direction: column;       /* Stack content vertically */
+            justify-content: center;      /* Center content vertically */
+            align-items: center;          /* Center content horizontally */
+            width: 80%; /* 80% of window size */
+            max-width: 1000px;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            transform: translate(-50%, -50%); /* Move content to the center */
+            top: 50%;  /* Position from the center */
+            left: 50%; /* Position from the center */
+        }
+
+        #popupImage {
+            width: 100%; /* Make the image fill the width */
+            max-width: 100%; /* Ensure it doesn’t exceed the popup content */
+            max-height: 80vh; /* Keep it within 80% of the viewport height */
+            height: auto;
+        }
+        
+        .popup-buttons {
+            margin-top: 15px;
+        }
+        
+        .popup-buttons button {
+            padding: 10px 20px;
+            margin: 0 10px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: #036975;
+            color: white;
+        }
+        
+        .popup-buttons button:hover {
+            background-color: #02454a;
+        }
+        
+    </style>
+{% endblock %}
+ 
+{% block content %}   
+    <!-- Video upload form and uploaded video player section -->
+    <div class="video-section">
+        <!-- Uploaded video player -->
+        <h2>Display video with maskes</h2>
+       
+         <!-- Spinner Wrapper, which includes the spinner and the message -->
+        <div class="video-container">
+            <div id="spinner-wrapper" class="spinner-wrapper" style="display: none;">
+                <div class="spinner"></div>        <!-- Loading spinner -->
+                <div class="message">Frames analyzing, please wait...</div>
+            </div>
+ 
+            <video id="uploadedVideo" width="640" height="480" controls>
+                <source id="videoSource" src="{{ url_for('static', filename='uploads/output.mp4') }}" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        </div>
+    </div>
+         <!-- Section 1: Thumbnails of all frames (4-column grid layout) -->
+         <div class="frame-section">
+            <h2 style="color:white;">Frames</h2> <!-- Text color white to contrast with background -->
+            <div class="frame-container">
+                {% for frame in frames %}
+                <div class="frame-block" id="frameBlock{{ loop.index0 }}">
+                    <img src="{{ url_for('get_rendered_frame', filename=frame)}}" alt="Frame"
+                        onclick="openImagePopup('{{ frame }}', {{ loop.index0 }})">
+                    <p style="color:white;">{{ frame }}</p> <!-- Text color white -->
+                </div>
+                {% endfor %}
+            </div>
+    </div>
+    <!-- Popup modal for showing selected image -->
+    <div id="imagePopup" class="image-popup" style="display:none;">
+        <div class="popup-content">
+            <span class="close-btn" onclick="closeImagePopup()">&times;</span>
+            <img id="popupImage" src="" alt="Selected Frame">
+            <div class="popup-buttons">
+                <button id="prevBtn" onclick="showPreviousImage()">&#60;</button>
+                <button id="editBtn" onclick="editImage()">Edit</button>
+                <button id="nextBtn" onclick="showNextImage()">&#62;</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        const frames = [ {% for frame in frames %} "{{ frame }}", {% endfor %} ]; // List of frames
+        let currentIndex = 0; // To track the current image index
+        let iteration = 0;
+    // Open the popup with the selected image
+    function openImagePopup(frame, index) {
+        currentIndex = index;
+        document.getElementById('popupImage').src = "{{ url_for('get_rendered_frame', filename='') }}" + frame;
+        document.getElementById('imagePopup').style.display = 'block';
+    }
+
+    // Close the popup
+    function closeImagePopup() {
+        document.getElementById('imagePopup').style.display = 'none';
+    }
+
+    // Show the previous image
+    function showPreviousImage() {
+        if (currentIndex > 0) {
+            currentIndex--;
+            openImagePopup(frames[currentIndex], currentIndex);
+        }
+    }
+
+    // Show the next image
+    function showNextImage() {
+        if (currentIndex < frames.length - 1) {
+            currentIndex++;
+            openImagePopup(frames[currentIndex], currentIndex);
+        }
+    }
+
+    // Listen for the keydown event and bind the "left arrow" and "right arrow" keys to the functions
+    document.addEventListener('keydown', function(event) {
+        // If "left arrow" is pressed, trigger the showPreviousImage() function
+        if (event.key === 'ArrowLeft') {
+            showPreviousImage();
+        }
+        // If "right arrow" is pressed, trigger the showNextImage() function
+        if (event.key === 'ArrowRight') {
+            showNextImage();
+        }
+    });
+
+    // Placeholder for the "Bearbeiten" (Edit) button action
+    function editImage() {
+        alert('Bearbeiten functionality to be implemented!');
+        iteration += 1;
+        console.log("iteration anzahl: ", iteration);
+        fetch('/choose_frame', {
+            method: 'POST',
+            headers: {
+            'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ frame: frames[currentIndex]})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success'){
+                //alert(`You chose frame: ${data.chosen_frame}`);
+                //Redirect to the next step if needed
+                window.location.href = '/generating_mask';
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+    </script>
+ {% endblock %}

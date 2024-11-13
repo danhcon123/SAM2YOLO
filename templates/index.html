@@ -1,0 +1,28 @@
+<!-- header.html -->
+{% extends "base.html" %}
+{% block title %}
+    <title>Home</title>
+{% endblock %}
+
+{% block extra_head %}
+    <style>
+        /* Additional styles or classes specific to the homepage */
+        .homepage-banner {
+            background-color: #f0f0f0;
+            color: #00796B;
+            padding: 20px;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="homepage-banner">
+        <h1>Welcome to the Flask Web App</h1>
+        <p>This is the home page with a custom banner.</p>
+    </div>
+    <a href="/upload">Go to Upload Page</a>
+    <a href="/choosing_frame">Go to Choosing Frame Page</a> 
+    <a href="/generating_mask">Go to Generating Mask Page</a>
+    <a href="/result">Go to Propagated Video</a>
+{% endblock %}
+ 

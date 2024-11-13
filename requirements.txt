@@ -1,0 +1,20 @@
+flask
+flask_sse
+numpy
+opencv-python
+sam2
+torch
+
+
+redis-server
+# In README or setup instructions:
+To run this project, you need Redis installed on your system. 
+You can install it with:
+
+- On Ubuntu/Debian:
+  sudo apt update
+  sudo apt install redis-server
+  
+- On macOS (with Homebrew):
+  brew install redis
+
