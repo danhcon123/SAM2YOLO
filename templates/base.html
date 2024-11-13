@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About</title>
+     <!-- Import Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <title>Reuseable Button Styles</title>
+    <style>
+    /*Basic styling for the button*/
+            /* General button styling */
+        .styled-button {
+            font-size: 16px;
+            background-color: #00796B;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            display: inline-block;
+        }
+ 
+        /* Hover effect for all buttons */
+        .styled-button:hover {
+            background-color: #0097A7;
+        }
+       
+        .styled-button:disabled{
+            background-color: #636363;
+        }
+        /*Header*/
+        header {
+            display: flex;
+            flex-direction: column;
+            align-items: left; /* Center the button horizontally */
+            padding: 5px;
+            width: 100%;
+            font-family: 'Arial', sans-serif; /* Use Arial font */
+            color: white; /*Text color*/
+            background-color: #00796B;
+        }
+ 
+        .header-content {
+            display: flex;
+            flex-direction: row;
+            align-items: left; /* Vertically center image and text */
+            justify-content: left;
+            width: 100%;
+        }
+ 
+        .header-content img {
+            max-width: 100px; /* Adjust size of the image if needed */
+            height: 100px;
+            margin-right: 20px; /* Add space between image and text */
+        }
+ 
+        .header-text {
+            text-align: left; /* Align the text to the left */
+        }
+ 
+        /* General button styling */
+        .header-buttons {
+            display: flex;
+            gap: 10px; /* Add spacing between buttons */
+            justify-content: left;
+            margin-top: flex;
+        }
+ 
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            justify-content: center; /* Horizontally center */
+        }
+ 
+        h2 {
+            color: #00796B;
+        }
+       
+        /*Spinner area*/
+        .spinner-wrapper {
+            display: none; /* Hidden by default */
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color:  rgba(89, 84, 84, 0.6); /* Semi-transparent black background */
+            pointer-events: none; /*KILL*/
+            z-index: 10; /* Keeps spinner above other elements */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .spinner-wrapper.active {
+            display: flex;
+            pointer-events: auto;
+        }
+       
+        .spinner {
+            border: 8px solid #f3f3f3;
+            border-top: 8px solid #00796B;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 2s linear infinite;
+        }
+ 
+        .message {
+            margin-top: 20px;
+            color: white;
+            text-align: center;
+            font-size: 20px;
+        }
+        
+        .waiting-effect {
+            font-size: 20px;
+            color: #ccc;
+        }
+        
+        .waiting-effect span {
+            animation: glow 0.6s forwards ;
+            animation-delay: calc((var(--i) - 2) * 0.05s);
+            color: #ccc;
+        }
+        
+        @keyframes glow {
+            0% {
+                color: #ccc;
+            }
+            100% {
+                color: #fff;
+                text-shadow: 0 0 3px rgba(255, 255, 255, 0.8), 0 0 5px rgba(255, 255, 255, 0.6);     
+            }
+        }
+
+        /*loading animation*/
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Close button styling */
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            font-size: 40px;
+            cursor: pointer;
+            color: #aaa;
+        }
+        .close-btn:hover {
+            color: #FFFFFF;
+        }
+        .close-btn:focus {
+            color: #bbb;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        /* Popup styling */
+        .image-popup {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8); /* Dark background with opacity */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 10px; /* Add padding for extra spacing from edges */
+        }
+
+        .image-popup {
+            transition: opacity 0.3s ease-in-out;
+        }
+        
+        .popup-content {
+            position: relative;
+            display: flex;                /* Flexbox to align content */
+            flex-direction: column;       /* Stack content vertically */
+            justify-content: center;      /* Center content vertically */
+            align-items: center;          /* Center content horizontally */
+            width: 80%; /* 80% of window size */
+            max-width: 1000px;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            transform: translate(-50%, -50%); /* Move content to the center */
+            top: 50%;  /* Position from the center */
+            left: 50%; /* Position from the center */
+        }
+
+        #popupImage {
+            width: 100%; /* Make the image fill the width */
+            max-width: 100%; /* Ensure it doesn’t exceed the popup content */
+            max-height: 80vh; /* Keep it within 80% of the viewport height */
+            height: auto;
+        }
+    </style>
+    <!-- Block for extra head content, such as additional styles or scripts -->
+    {% block extra_head %}
+    {% endblock %}
+</head>
+ 
+<body>
+    <header>
+    <!-- Image and Text side by side -->
+        <div class="header-content">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
+            <div class="header-text">
+                <h1>Ice Bear</h1>
+                <p>Annotating images and videos with the pros</p>
+            </div>
+        </div>
+ 
+    <!-- Buttons under image and text, horizontally aligned -->
+        <div class="header-buttons">
+            <a href="/index" class="styled-button">Home</a>
+            <a href="/index" class="styled-button">Refresh</a>
+            <a href="/contact" class="styled-button">Contact</a>
+        </div>
+    </header>
+
+    <div>
+        {% block content %}{% endblock %}
+    </div>
+    
+    <script></script>
+</body>
+</html>

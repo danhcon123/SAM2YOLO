@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Annotating first frame</title>
+    <style>
+ 
+        /*Header*/
+        header {
+            display: flex;
+            flex-direction: column;
+            align-items: left; /* Center the button horizontally */
+            padding: 5px;
+            width: 100%;
+            font-family: 'Arial', sans-serif; /* Use Arial font */
+            color: white; /*Text color*/
+            background-color: #00796B;
+        }
+   
+        .header-content {
+            display: flex;
+            flex-direction: row;
+            align-items: left; /* Vertically center image and text */
+            justify-content: left;
+            width: 100%;
+        }
+   
+        .header-content img {
+            max-width: 100px; /* Adjust size of the image if needed */
+            height: 100px;
+            margin-right: 20px; /* Add space between image and text */
+        }
+   
+        .header-text {
+            text-align: left; /* Align the text to the left */
+        }
+   
+        /* General button styling */
+        .header-buttons {
+            display: flex;
+            gap: 10px; /* Add spacing between buttons */
+            justify-content: left;
+            margin-top: flex;
+        }
+ 
+        /* Main layout: 2 sections side by side */
+        .container {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            box-sizing: border-box;
+            height: 90vh; /* Full height for scrolling */
+        }
+ 
+        /* Section 1 - Thumbnails (Left) */
+        .section-links {
+            width: 50%; /* Same width as Section 2 */
+            background-color: #0097A7; /* Background color */
+            border: 4px solid #036975; /* Same border as Section 2 */
+            height: 80%; /* Take full height */
+            overflow-y: auto; /* Allows vertical scrolling */
+            padding: 10px;
+            box-sizing: border-box;
+        }
+ 
+        /* 4-column grid layout for thumbnails */
+        .frame-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr); /* 4 columns */
+            grid-gap: 10px; /* Space between thumbnails */
+        }
+ 
+        .frame-block {
+            text-align: center;
+            cursor: pointer;
+        }
+ 
+        .frame-block img {
+            max-width: 100%; /* Make image fit within the grid */
+            border: 2px solid transparent;
+            transition: border 0.2s;
+        }
+ 
+        /* Highlight the selected thumbnail */
+        .frame-block.selected img {
+            border: 4px solid white; /* White border for selected picture */
+        }
+ 
+        /* Section 2 - Main Image (Right) */
+        .section-middle {
+            width: 50%; /* Same width as Section 1 */
+            text-align: center;
+            height: 100%; /* Full height */
+            padding: 10px;
+            box-sizing: border-box;
+        }
+ 
+        /* Main frame styling */
+        .main-frame {
+            width: 640px;
+            height: 480px;
+            border: 4px solid #0097A7;
+        }
+ 
+        .frame-name {
+            margin-top: 10px;
+            font-size: 18px;
+            color: #00796B;
+        }
+ 
+        /* General button styling */
+        .styled-button {
+            font-size: 16px;
+            background-color: #00796B;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+ 
+        /* Hover effect for all buttons */
+        .styled-button:hover {
+            background-color: #0097A7;
+        }
+ 
+        /* Disable button effect */
+        .styled-button:disabled {
+            background-color: #636363;
+        }
+ 
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <!-- Image and Text side by side -->
+                <div class="header-content">
+                    <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
+                    <div class="header-text">
+                        <h1>Ice Bear</h1>
+                        <p>Annotating images and videos with the pros</p>
+                    </div>
+                </div>
+       
+            <!-- Buttons under image and text, horizontally aligned -->
+                <div class="header-buttons">
+                    <a href="/" class="styled-button">Home</a>
+                    <a href="/about" class="styled-button">Refresh</a>
+                    <a href="/contact" class="styled-button">Contact</a>
+                </div>
+    </header>
+ 
+    <h2>Select a Frame to Start Annotating</h2>
+ 
+    <!-- Main content container with 2 sections -->
+    <div class="container">
+ 
+        <!-- Section 1: Thumbnails of all frames (4-column grid layout) -->
+        <div class="section-links">
+            <h2 style="color:white;">Frames</h2> <!-- Text color white to contrast with background -->
+            <div class="frame-container">
+                {% for frame in frames %}
+                <div class="frame-block" id="frameBlock{{ loop.index0 }}">
+                    <img src="{{ url_for('get_frame', filename=frame)}}" alt="Frame" onclick="setMainFrame('{{ frame }}')">
+                    <p style="color:white;">{{ frame }}</p> <!-- Text color white -->
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+ 
+        <!-- Section 2: Main Frame Display -->
+        <div class="section-middle">
+            <img id="mainFrame" class="main-frame" src="{{ url_for('get_frame', filename=frames[0])}}" alt="Main Frame">
+            <p id="mainFrameName" class="frame-name">{{ frames[0] }}</p>
+ 
+            <!-- Previous and Next Buttons -->
+            <div class="navigation-buttons">
+                <button id="prevButton" class="styled-button">Previous</button>
+                <button id="chooseButton" class="styled-button">Chose</button>
+                <button id="nextButton" class="styled-button">Next</button>
+            </div>
+        </div>
+ 
+    </div>
+ 
+    <script>
+        let currentIndex = 0;
+        const frames = {{ frames | tojson }}; // List of frame filenames from Flask
+        const mainFrameElement = document.getElementById('mainFrame');
+        const mainFrameNameElement = document.getElementById('mainFrameName');
+ 
+        // Update the main frame with the selected image
+        function setMainFrame(frame) {
+            mainFrameElement.src = `/frames/${frame}`;
+            mainFrameNameElement.textContent = frame;
+            currentIndex = frames.indexOf(frame);
+ 
+            // Remove highlight from all thumbnails
+            document.querySelectorAll('.frame-block').forEach(function(block) {
+                block.classList.remove('selected');
+            });
+ 
+            // Highlight the selected thumbnail
+            document.getElementById(`frameBlock${currentIndex}`).classList.add('selected');
+        }
+ 
+        // Function to go to the previous frame
+        document.getElementById('prevButton').addEventListener('click', function() {
+            if (currentIndex > 0) {
+                currentIndex--;
+                setMainFrame(frames[currentIndex]);
+            }
+            // Disable the previous button if it's at the first frame
+            if (currentIndex === 0) {
+                    document.getElementById('prevButton').disabled = true;
+            }
+            // Ensure the next button is enabled if we move backwards
+            else {document.getElementById('prevButton').disabled = false;}
+            document.getElementById('nextButton').disabled = false;
+        });
+ 
+        // Function to go to the next frame
+        document.getElementById('nextButton').addEventListener('click', function() {
+            if (currentIndex < frames.length - 1) {
+                currentIndex++;
+                setMainFrame(frames[currentIndex]);
+            }
+                        // Disable the next button if it's at the last frame
+                        if (currentIndex === frames.length - 1) {
+                document.getElementById('nextButton').disabled = true;
+            }
+            // Ensure the previous button is enabled if we move forward
+            else {document.getElementById('nextButton').disabled = false;}
+            document.getElementById('prevButton').disabled = false;
+        });
+ 
+        //Function to choose the current frame and proceed
+        document.getElementById('chooseButton').addEventListener('click', function(){
+            fetch('/choose_frame', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ frame: frames[currentIndex] })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success'){
+                    //alert(`You chose frame: ${data.chosen_frame}`);
+                    //Redirect to the next step if needed
+                    window.location.href = '/generating_mask';
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        });
+    </script>
+</body>
+</html>
