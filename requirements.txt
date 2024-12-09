@@ -2,5 +2,5 @@ flask
 flask_sse
 numpy
 opencv-python
-sam2
 torch
+matplotlib

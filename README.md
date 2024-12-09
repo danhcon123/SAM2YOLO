@@ -14,6 +14,10 @@
 ---
 # Set up
 
+Install requirements
+
+!pip install -r requirements.txt
+
 Follow the installation instructions for SAM2 provided in the official repository:
 
 https://github.com/facebookresearch/sam2"
