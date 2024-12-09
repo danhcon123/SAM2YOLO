@@ -11,4 +11,9 @@
 🛠️ Generating new video ->  
 🛠️ Export in Video or YOLO-training data set format  
 
+---
+# Set up
 
+Follow the installation instructions for SAM2 provided in the official repository:
+
+https://github.com/facebookresearch/sam2"
