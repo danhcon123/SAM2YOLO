@@ -1,4 +1,4 @@
-#Using SAM2 to annotate video datas
+# Using SAM2 to annotate video datas
 
 
 Uploading Video ->
