@@ -1,8 +1,5 @@
-
 Using SAM2 to segmentate objects from images
 
-
->>>>>>> ffe564f847db58190d33108b52f01c62bb3572f7
 
 Uploading Video ->
 Selecting Frame to Start Segmenting -> 
