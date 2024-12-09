@@ -18,6 +18,7 @@ Install requirements
 
 ```bash
 pip install -r requirements.txt
+```
 
 Follow the installation instructions for SAM2 provided in the official repository:
 
