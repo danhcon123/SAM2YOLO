@@ -16,7 +16,7 @@
 
 Install requirements
 
-!pip install -r requirements.txt
+`!pip install -r requirements.txt`
 
 Follow the installation instructions for SAM2 provided in the official repository:
 
