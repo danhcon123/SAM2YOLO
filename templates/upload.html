@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block extra_head %}
+    <style>
+        /* Container to position the video and the spinner */
+        .video-container {
+            position: relative;/* Make the video container the reference point for the spinner */
+            width: 640px;
+            height: 480px;
+            margin: 0 auto; /* Center the video container on the page */
+        }
+        /* Video upload form and video player positioned 60px below header */
+        .video-section {
+            display: flex;
+            flex-direction: column;  /* Stack elements vertically */
+            justify-content: center;
+            align-items: center;
+            font-family: 'Arial', sans-serif;
+        }
+        /* Container for buttons and form */
+        .controls {
+            margin-top: 50px;
+            display: flex;
+            gap: 10px;  /* Add spacing between buttons */
+            justify-content: center;
+        }
+       
+        /* Video player styling */
+        video{
+            margin-top: 0px;
+            background-color: #000000;
+        }
+    </style>
+{% endblock %}
+ 
+{% block content %}   
+    <!-- Video upload form and uploaded video player section -->
+    <div class="video-section">
+        <!-- Uploaded video player -->
+        <h2>Upload your video</h2>
+       
+         <!-- Spinner Wrapper, which includes the spinner and the message -->
+        <div class="video-container">
+            <div id="spinner-wrapper" class="spinner-wrapper" style="display: none; background-color: rgba(89, 84, 84);">
+                <div class="spinner"></div>        <!-- Loading spinner -->
+                <div class="message"></div>
+            </div>
+ 
+            <video id="uploadedVideo" width="640" height="480" controls>
+                <source id="videoSource" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        </div>
+ 
+        <!-- Form and buttons section below the video -->
+        <div class="controls">
+            <!-- Form for video upload -->
+            <form id="uploadForm" action="/upload" method="post" enctype="multipart/form-data">
+                <input type="file" id="fileInput" name="file" accept="video/*" required>
+                <button type="submit" id="uploadButton" class="styled-button" disabled>Upload</button>
+            </form>
+            <!-- Start Annotating Button -->
+            <button id="annotateButton" class="styled-button" disabled>Start Annotating</button>
+        </div>
+    </div>
+ 
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const uploadButton = document.getElementById('uploadButton');
+        const annotateButton = document.getElementById('annotateButton');
+        const videoElement = document.getElementById('uploadedVideo');
+        const videoSource = document.getElementById('videoSource');
+        const spinnerWrapper = document.getElementById('spinner-wrapper');
+        const messageDiv = document.querySelector(".spinner-wrapper .message");
+
+        function checkStatus() {
+            fetch('/get_status')
+                .then(response => response.json())
+                .then(data => {
+                    messageDiv.textContent = data.message;
+                    setTimeout(() => {
+                        // Apply the waiting-effect class and clear the content for animation
+                        messageDiv.className = 'message waiting-effect';
+                        const text = data.message;
+                        console.log(text);
+                        // Clear the text content and wrap each character in a span
+                        messageDiv.innerHTML = '';
+                        for (let i = 0; i < text.length; i++) {
+                            const span = document.createElement('span');
+                            span.textContent = text[i];
+                            span.style.setProperty('--i', i);
+                            messageDiv.appendChild(span);
+                            console.log(i)
+                        }
+                    }, 10); // Delay in milliseconds
+                })
+                .catch(error => {
+                    console.error("Error checking status:", error);
+                });
+        }
+
+        // Step 1: Initially disable both buttons
+        uploadButton.disabled = true;
+        annotateButton.disabled = true;
+
+        // Step 2: Enable upload button when a video is selected
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                uploadButton.disabled = false;
+            }
+        });
+
+        // Step 3: Handle the upload process with async function
+        uploadButton.addEventListener('click', async () => {
+            // Disable upload button and show spinner
+            uploadButton.disabled = true;
+            spinnerWrapper.style.display = 'flex';
+            checkStatus();
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                // Upload file to server
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    // Simulate processing delay
+                    setTimeout(() => {
+                        spinnerWrapper.style.display = 'none';
+
+                        // Display uploaded video
+                        videoSource.src = URL.createObjectURL(fileInput.files[0]);
+                        videoElement.style.display = 'block';
+                        videoElement.load();
+
+                        // Enable Start Annotating button after processing
+                        annotateButton.disabled = false;
+                    }, 500); // Simulated delay
+                } else {
+                    alert("Failed to upload the video.");
+                }
+            } catch (error) {
+                alert("Error uploading the video.");
+            }
+        });
+
+            // Redirect to the annotation page when "Start Annotating" is clicked
+        annotateButton.addEventListener('click', function() {
+            window.location.href = '/choosing_frame';
+        });
+    </script>
+ {% endblock %}

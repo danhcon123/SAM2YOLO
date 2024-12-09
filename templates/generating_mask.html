@@ -1,0 +1,598 @@
+{% extends "base.html" %}
+
+{% block extra_head %}
+    <style>
+        /*Delete Button*/
+        .delete-button {
+            font-size: 14px;
+            background-color: #00796B;
+            color: white;
+            padding: 5px;
+            border: none;
+            cursor: pointer;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            line-height: 15px;
+            display: inline-block;
+        }
+
+        .delete-button:hover {
+            background-color: #e53935;
+        }
+ 
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            user-select: none; /* Prevent text selection on the page */
+        }
+ 
+        h2 {
+            color: #00796B;
+        }
+        /*object window*/
+        .window{
+            border: 1px solid #ccc;
+            padding: 10px;
+            width: 150px;
+            position: absolute;
+            top: 50%;
+            left: 20px;
+            background-color: rgba(89, 84, 84, 0.6); /* Semi-transparent background */            
+            box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
+            cursor: grab; /* Indicate that the window is draggable */
+        }
+
+        .window:hover{
+            background-color: rgba(89, 84, 84, 0.8); /* Darker background on hover */
+        }
+
+        /* Prevent moving into the header area */
+        .header-boundary {
+            height: 100px; /* Set the height of the header */
+            background-color: transparent;
+        }
+
+        /* Style for marking points (star) */
+        /*redstar = negative = right-click*/
+        .red-star {
+            position: absolute;
+            color: rgb(227, 7, 7); /* Star color */
+            font-size: 30px; /* Size of the star */
+            cursor: pointer;
+            transform: translate(-50%, -50%); /* Move the star's center to the cursor */
+        }
+        /*greenstar = positive click = left-click*/
+        .green-star {
+            position: absolute;
+            color: rgb(36, 224, 36); /* Star color */
+            font-size: 30px; /* Size of the star */
+            cursor: pointer;
+            transform: translate(-50%, -50%); /* Move the star's center to the cursor */
+        }
+        .green-star:hover, .red-star:hover {
+            transform: scale(1.5); /* Enlarge the star when hovered */
+            color: yellow; /* Change the color when hovered */
+            transform: translate(-50%, -50%); /* Move the star's center to the cursor */
+        }
+
+        .image {
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 10px;
+        }
+       
+        /*Style the thumbnail image*/
+        .thumbnail-image{
+            border: 2px solid white;
+            width: 100%;
+            transition: transfrom 0.2s; /*Smooth hover effect*/
+            cursor: pointer;
+        }
+
+    </style>
+{% endblock %}
+ 
+{% block content %}   
+
+    <h2> Segmentating Image </h2>
+      <!-- Window containing buttons for adding new objects and hiding the window -->
+        <div id="image-container" style="position: relative; display: inline-block;">
+            <div id="object-window" class="window">
+                {%if file_exists %}
+                    <img id="old_image" class="thumbnail-image" 
+                    data-fullsrc="{{ url_for('static', filename='rendered_frames/' ~ filename)}}"
+                    src="{{ url_for('static', filename='rendered_frames/' ~ filename)}}" onclick="openImagePopup()">
+                {%endif%}
+                <button id="add-object-btn" class="styled-button">+ Add Object</button>
+                <!-- Object buttons will appear here -->
+                <div id="object-buttons"></div>
+            </div>
+            <img id="image" class="image" src="{{ url_for('static', filename='frames/' + filename)}}" alt="Chosen Frame">
+            
+            <!--Pop up window-->
+            <div id="imagePopup" class="image-popup" style="display:none;">
+                <div class="popup-content">
+                    <span class="close-btn" onclick="closeImagePopup()">&times;</span>
+                    <img id="popupImage" src="" alt="Selected Frame">
+                </div>
+            </div>
+        </div>
+        <button id="generate-button" class="styled-button">Generating Masks</button>
+        <button id="video-propagation-button" class="styled-button">Video Propagation</button>   
+    <!-- Debugging coordinates -->
+    <h3>Click Coordinates (Relative to Image):</h3>
+    <ul id="coordinates-list"></ul>
+   
+    <script>
+        //------------------------------------------------------------------------------------------------
+        //------------------------------------------------------------------------------------------------
+        //--------------------Object window---------------------------------------------------------------
+        //------------------------------------------------------------------------------------------------
+        //------------------------------------------------------------------------------------------------
+
+
+        //Object windows
+        const objectWindow = document.getElementById('object-window');
+        const addObject = document.getElementById('add-object-btn');
+        const imageContainer = document.getElementById('image-container');
+        const img = document.getElementById('image');
+        let isDragging = false;
+        let offsetX = 0, offsetY = 0;
+
+        //Mouse down event to start dragging the objects board
+        objectWindow.addEventListener('mousedown', function(e){
+            isDragging = true;
+            offsetX = e.clientX - objectWindow.getBoundingClientRect().left;
+            offsetY = e.clientY - objectWindow.getBoundingClientRect().top;
+            objectWindow.style.cursor = 'grabbing'; //Chang cursor during drag
+            e.preventDefault(); // Prevent default text/image selection behavior
+        });
+
+        //Mouse move event to drag the objects board
+        document.addEventListener('mousemove', function(e) {
+            if (isDragging){
+                e.preventDefault(); // Prevent text/image selection during drag
+
+                //Calculate new position relative to imageContainer boundaries
+                const containerRect = imageContainer.getBoundingClientRect();
+                const objectRect = objectWindow.getBoundingClientRect();
+    
+                let newX = e.clientX - containerRect.left - offsetX;
+                let newY = e.clientY - containerRect.top - offsetY;
+                newX = Math.max(0, Math.min(newX, containerRect.width - objectRect.width));
+                newY = Math.max(0, Math.min(newY, containerRect.height - objectRect.height));
+                
+                // Apply the constrained position to the object window
+                objectWindow.style.left = `${newX}px`;
+                objectWindow.style.top = `${newY}px`;
+            }    
+        });
+
+        // Mouse up event to stop dragging
+        document.addEventListener('mouseup', function() {
+            isDragging = false;
+            objectWindow.style.cursor = 'grab'; // Reset cursor
+        });
+
+        //------------------------------------------------------------------------------------------------
+        //------------------------------------------------------------------------------------------------
+        //-------------------Create Object Buttons + Delete Buttons---------------------------------------
+        //------------------------------------------------------------------------------------------------
+        //------------------------------------------------------------------------------------------------
+
+        // Add new object button click event
+        const addObjectBtn = document.getElementById('add-object-btn');
+        const objectButtonsContainer = document.getElementById('object-buttons');
+        //let objectContainer = null;
+        let objectId = 0;
+        let activeObjectId = null; // To keep track of which object is active
+        let objectsList = []; // To store points and labels for each object
+        let currentFrame = img.src.split('/').pop(); // Extract the image file name (e.g., "0.jpg")
+        let objectsList_temp = [];
+
+        //Function to load objects list (id and color) from the backend 
+        async function loadObjectsListFromBackend(){
+            try{
+                const response = await fetch('/get_objects');
+                if(response.ok){
+                    const data= await response.json();
+                    console.log("Objects list loaded from backend:", data);
+                    objectsList_temp = data; //Use the fetched objects list                
+                } else{
+                    console.error("Error fetching objects list from backend", response.statusText);
+                }
+            } catch (error){
+                console.error("Error fetching objects list from backend:", error);
+            }
+        }
+        
+        //Call funcitons when page is loaded
+        document.addEventListener('DOMContentLoaded', async function() {
+            await loadObjectsListFromBackend();
+            console.log("DOMContentLoaded");
+            if (objectsList_temp.length > 0) {
+                console.log("objectsList_temp: ",objectsList_temp )
+                const objectContainer = document.createElement('div');
+                console.log("there are received objects");
+                objectsList_temp.forEach((obj) => {
+                    const borderColor = obj.color; // Use existing or generate a color
+                    const objectButton = createObjectButton(obj.id, borderColor, objectContainer);
+                    const deleteButton = createDeleteButton(objectButton, objectContainer, obj.id);
+                    console.log("obj.id: ", obj.id);
+                    // Append the object button and delete button to the container
+                    objectContainer.appendChild(objectButton);
+                    objectContainer.appendChild(deleteButton);
+                    objectButtonsContainer.appendChild(objectContainer);
+        
+                    // Add this object to the objectsList
+                    objectsList.push({ 
+                        id: obj.id,
+                        points: obj.points || [],
+                        labels: obj.labels || [],
+                        borderColor: borderColor,
+                        element: objectButton,
+                        frames: obj.frames || []
+                    });
+                });
+            }
+        });
+
+        // Main event listener for the Add Object button
+        //Event listerner for the + Add Object button
+        addObjectBtn.addEventListener('click', function() {
+            objectId =  updateObjectIds(); //Increment the Object ID
+            
+            const borderColor = getRandomColor();
+            const objectContainer = document.createElement('div');
+
+            const objectButton = createObjectButton(objectId, borderColor, objectContainer);
+            let deleteButton = createDeleteButton(objectButton, objectContainer, objectId);
+
+            // Append the object button and delete button to the container
+            objectContainer.appendChild(objectButton);
+            objectContainer.appendChild(deleteButton);
+
+            // Append the new object container to the main object buttons container
+            objectButtonsContainer.appendChild(objectContainer);
+
+            // Add this object to the objects list
+            objectsList.push({ 
+                id: objectId,
+                points: [],
+                labels: [],
+                borderColor: borderColor,
+                element: objectButton,
+                frames: [currentFrame]
+            });
+        });
+
+        //------------------------------------------------------------------------------------------------
+        //------------------------------------------------------------------------------------------------
+        //--------------------Mouse click to define segmented object--------------------------------------
+        //------------------------------------------------------------------------------------------------
+        //------------------------------------------------------------------------------------------------
+
+        const coordsDisplay = document.getElementById('coordinates-list');
+        //Prevent defaut for context menu -> right click = no this default setting
+        document.addEventListener('contextmenu', function(event) {
+            event.preventDefault(); // Prevent the default context menu globally
+        });
+        
+        //Prevent the context menu from showing up when right-click
+        img.addEventListener('contextmenu', function(event){
+           event.preventDefault();
+        });
+    
+        
+        // Add an event listener for mouse click on the image (add Stars)
+        img.addEventListener('mousedown', function(event){
+            if (activeObjectId==null){
+                alert('Please select an object first');
+                return;
+            }
+            
+            //Get the bounding box of the image
+            const rect =img.getBoundingClientRect();
+            //Get the original image dimension
+            const originalWidth = img.naturalWidth;
+            const originalHeight = img.naturalHeight;
+            // Get the displayed size of the image (the size it is shown on the screen)
+            const displayedWidth = rect.width;
+            const displayedHeight = rect.height;
+            //Calculate the coordinates relatives to the image
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+        
+            // Adjust the coordinates to the original size
+            const adjustedX = (x / displayedWidth ) * originalWidth;
+            const adjustedY = (y / displayedHeight) * originalHeight;
+ 
+ 
+            // Only handle left-click (button 0) or right-click (button 2)
+            if (event.button !== 0 && event.button !== 2) {
+                return;  // Ignore any other mouse buttons (e.g., middle-click or extra buttons)
+            }
+                        
+            //Determine the type of click (left or right)
+            let starClass, label;
+            if(event.button === 0){
+                starClass = 'green-star';
+                label = 1; //Label for left-click
+            } else if (event.button === 2){
+                starClass = 'red-star';
+                label = 0; //Label for right-click
+            }
+            
+            //Find the active object in objectsList by id
+            const activeObject = objectsList.find(obj => obj.id == activeObjectId);
+            
+            // Store the adjusted coordinates in the active object's points and labels
+            activeObject.points.push({ x: adjustedX.toFixed(0), y: adjustedY.toFixed(0) });
+            activeObject.labels.push(label);
+
+            // If this frame isn't already stored for this object, add it
+            if (!activeObject.frames.includes(currentFrame)) {
+                activeObject.frames.push(currentFrame);
+            }
+            console.log(activeObject);
+            //Display the clicked coordinates in the list for debugging
+            const li = document.createElement('li');
+            li.textContent = `(x: ${adjustedX.toFixed(0)}, y: ${adjustedY.toFixed(0)}, label: ${label})`;
+            coordsDisplay.appendChild(li);
+            // Convert x and y to percentages for responsive positioning
+            const xPercent = (x / displayedWidth) * 100;
+            const yPercent = (y / displayedHeight) * 100;
+
+            //Mark the clicked point on the image with a star
+            const star = document.createElement('div')
+            const starId = `star-${activeObjectId} - ${activeObject.points.length -1}`; //Unique ID for each star
+            star.id = starId;
+            star.classList.add (starClass)
+            star.innerHTML = '★'; //Star symbol  
+            star.style.left=`${xPercent}%`;
+            star.style.top = `${yPercent}%`;
+            star.style.border = `3px solid ${activeObject.borderColor}`;
+            imageContainer.appendChild(star);
+
+                    
+            // Add the star to the active object's stars array
+            activeObject.stars = activeObject.stars || []; // Initialize if not already
+            activeObject.stars.push(star);
+
+            //Add click event listener to remove the star when clicked
+            star.addEventListener('click', function(){
+               //event.stopPropagation();// Prevent the event from bubbling up
+               imageContainer.removeChild(star); //Remove star from the DOM
+               activeObject.points.splice(starId.split('-')[2], 1); // Remove the point from the points array
+               activeObject.labels.splice(starId.split('-')[2], 1); // Remove the label from the labels array       
+               li.remove();
+               console.log(activeObject.points);
+            });
+            console.log(objectsList);
+
+        });
+
+        const messageDiv = document.querySelector(".spinner-wrapper .message");
+        const spinnerWrapper = document.getElementById('spinner-wrapper');
+
+        //Generate Masks
+        document.getElementById('generate-button').addEventListener('click', function() {
+            checkStatus();
+            //spinnerWrapper.classList.add('active');
+            //spinnerWrapper.style.display = 'flex';
+            fetch('/generate_mask', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(objectsList)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Set the image source to the base64-encoded image returned by the backend
+                    img.src = `data:image/png;base64,${data.image_data}`;
+                    //spinnerWrapper.classList.remove('active');
+                    //spinnerWrapper.style.display = 'none';
+                } else {
+                    console.error('Failed to generate the mask:', data.message);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        });
+        
+        //Video Propagating
+        document.getElementById("video-propagation-button").addEventListener("click", async function () {
+            //spinnerWrapper.classList.add('active');
+            //spinnerWrapper.style.display = 'flex';
+            checkStatus();
+            try {
+
+                //Send request to propagate segmentation
+                const response = await fetch('/propagate_segmentation', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(objectsList)  // Assuming objectsData is your JSON data
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    //spinnerWrapper.classList.remove('active');
+                    //spinnerWrapper.style.display = 'none';
+                    console.log("Segmentation propagated successfully!");
+                    img.innerHTML=''
+                    window.location.href = '/result';
+                } else {
+                    console.error("Error propagating segmentation:", result.message);
+                }
+            } catch (error) {
+                console.error("Request failed:", error);
+            }
+        });
+
+        //------------------------------------------------------------------------------------------------
+        //------------------------------------------------------------------------------------------------
+        //--------------------Help Functions--------------------------------------------------------------
+        //------------------------------------------------------------------------------------------------
+        //------------------------------------------------------------------------------------------------
+        //get status from backend and give back with effect to wait window
+        function checkStatus() {
+            fetch('/get_status')
+                .then(response => response.json())
+                .then(data => {
+                    messageDiv.textContent = data.message;
+                    setTimeout(() => {
+                        // Apply the waiting-effect class and clear the content for animation
+                        messageDiv.className = 'message waiting-effect';
+                        const text = data.message;
+                        console.log(text);
+                        // Clear the text content and wrap each character in a span
+                        messageDiv.innerHTML = '';
+                        for (let i = 0; i < text.length; i++) {
+                            const span = document.createElement('span');
+                            span.textContent = text[i];
+                            span.style.setProperty('--i', i);
+                            messageDiv.appendChild(span);
+                            console.log(i)
+                        }
+                    }, 10); // Delay in milliseconds
+                })
+                .catch(error => {
+                    console.error("Error checking status:", error);
+                });
+        }
+
+        //Open thumbnails image
+        function openImagePopup() {
+            // Get the popup and the image elements
+            const popup = document.getElementById('imagePopup');
+            const popupImage = document.getElementById('popupImage');
+            const oldImage = document.getElementById('old_image');
+            //Get the full-size image URL from data-fullsrc attribute
+            const fullImageSrc = oldImage.getAttribute('data-fullsrc');  // Get the data attribute with the full-size image URL
+            popupImage.src= fullImageSrc;
+            popup.style.display = 'block';
+        }
+    
+        // Close the popup
+        function closeImagePopup() {
+            document.getElementById('imagePopup').style.display = 'none';
+        }
+
+        // Function to get random color
+        function getRandomColor() {
+            const letters ='0123456789ABCDEF'
+            let color = '#';
+            for (let i = 0; i<6 ; i++){
+                color += letters[Math.floor(Math.random() * 16)];
+            }
+            return color;
+        }
+
+        // Function to update object IDs after deletion
+        function updateObjectIds() {
+            objectsList.forEach((obj, index) => {
+                obj.element.innerText = `Object ${index + 1}`;
+                obj.element.setAttribute('data-id', index + 1);
+                obj.id = index + 1; // Update the id to be sequential
+            });
+            // Return the next available objectId based on the current list length
+            return objectsList.length + 1; // The next object will have id = length + 1   
+        }
+
+        // Method to create an object button
+        function createObjectButton(objectId, borderColor, objectContainer) {
+            const objectButton = document.createElement('button');
+            
+            objectButton.classList.add('styled-button');
+            objectButton.innerText = `Object ${objectId}`;
+            objectButton.style.border = `5px solid ${borderColor}`; // Set a random border color
+            objectButton.style.marginTop = `7px`;
+            objectButton.setAttribute('data-id', objectId); // Set the data-id attribute with the object ID
+            objectButton.isActive = false; // Track if the button is active
+
+            // Add click event listener to the object button
+            objectButton.addEventListener('click', function() {
+                const id = objectButton.getAttribute('data-id');
+                activeObjectId = id;
+
+                // Toggle the button
+                if (objectButton.isActive) {
+                    objectButton.isActive = false;
+                    activeObjectId = null;
+                    objectButton.style.backgroundColor = '#00796B';
+                    objectButton.style.boxShadow = 'none'; // Removes the box shadow
+                    alert(`Object ${id} is now deactivated.`);
+                } else {
+                    objectButton.isActive = true;
+                    activeObjectId = id;
+                    objectButton.style.backgroundColor = '#0097A7';
+                    objectButton.style.boxShadow = `0 0 0 6px #FFFFFF`; // Outer border effect
+                    alert(`Object ${id} is now active! Start selecting points.`);
+                }
+
+                // Deactivate other buttons
+                objectsList.forEach(obj => {
+                    if (obj.id != id) {
+                        obj.element.isActive = false;
+                        obj.element.style.backgroundColor = '#00796B';
+                        obj.element.style.boxShadow = 'none'; // Removes the box shadow
+                    }
+                });
+            });
+
+            // Return the object button and container for further processing
+            return objectButton;
+        }
+
+        // Method to create a delete button
+        function createDeleteButton(objectButton, objectContainer, objectId) {
+            const deleteButton = document.createElement('button');
+            deleteButton.classList.add('delete-button');
+            deleteButton.innerHTML = 'X';
+
+            // Add click event listener to the delete button
+            deleteButton.addEventListener('click', function() {
+                const idToRemove = objectButton.getAttribute('data-id'); // Get the object ID from the button
+                console.log("delete id: ", idToRemove);
+                objectContainer.remove(); // Remove the object container from DOM
+                const objectToRemove = objectsList.find(obj => obj.id === parseInt(idToRemove));
+
+                // Remove the object from the objects list
+                objectsList = objectsList.filter(obj => obj.id !== parseInt(idToRemove));
+
+                // Update the remaining object IDs
+                activeObjectId = null;
+
+                // Deactivate all other buttons
+                objectsList.forEach(obj => {
+                    obj.element.isActive = false;
+                    obj.element.style.backgroundColor = '#00796B';
+                    obj.element.style.boxShadow = 'none';
+                });
+
+                // Update objectId to reflect the next available ID
+                updateObjectIds();
+                // Remove any stars associated with the deleted object
+                if (objectToRemove && objectToRemove.stars) {
+                    objectToRemove.stars.forEach(star => {
+                        imageContainer.removeChild(star); // Remove the star from the DOM
+                    });
+                }
+                console.log(objectId)
+            });
+            console.log("Anzahl element list: ", objectsList.length);
+            console.log(objectsList.lengnth);
+            return deleteButton;    
+        }
+    </script>
+{% endblock %}
