@@ -446,7 +446,7 @@
         //------------------------------------------------------------------------------------------------
         //get status from backend and give back with effect to wait window
         function checkStatus() {
-            fetch('/get_status')
+            fetch('/update_status')
                 .then(response => response.json())
                 .then(data => {
                     messageDiv.textContent = data.message;

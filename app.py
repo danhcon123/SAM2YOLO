@@ -27,12 +27,13 @@ RENDERED_FRAME_FOLDER = '/home/gauva/flask_app/static/rendered_frames/'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # Initialize the VideoSegmentation object globally
+status_message = "Waiting"
 model_cfg = "sam2_hiera_l.yaml"
 checkpoint = "/home/gauva/sam2/segment-anything-2/checkpoints/sam2_hiera_large.pt"
 video_dir = FRAME_FOLDER
 global_objects = [] #Stores the object button for the not first time propagation
 global_iteration = 0
-app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024 #100MB
+app.config['MAX_CONTENT_LENGTH'] = 1000 * 1024 * 1024 #1GB
  
 #Allowed file extensions (videos)
 ALLOWED_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv', 'webp', 'm4v'}
@@ -75,7 +76,7 @@ def request_entity_too_large(error):
 # Route for the homepage
 @app.route('/')
 def home():
-    return render_template('index.html')
+    return render_template('upload.html')
  
 # Route for the about page
 @app.route('/upload', methods = ['GET', 'POST'])
@@ -93,7 +94,9 @@ def upload(): #Upload video
        
         #If file is allowed and has an appropiate extension
         if file and allowed_file(file.filename):
-            session['status'] = "Uploading video and separating frames"
+            #session['status'] = "Uploading video and separating frames"
+            set_status("Uploading video and separating frames")
+            update_status()
             filename = file.filename
             video_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(video_path) #Save the file to the uploaded folder
@@ -201,7 +204,8 @@ def generate_mask():
         # Store the points and labels for this object
         prompts[ann_obj_id] = points, labels
         # Call the add_points method for the current object
-        session['status'] = "Generating masks"
+        set_status("Generating masks")
+        update_status()
         out_obj_ids, out_mask_logits = video_segmenter.add_points(
             ann_frame_idx=ann_frame_idx,
             ann_obj_id=ann_obj_id,
@@ -235,7 +239,8 @@ def propagate_segmentation():
     #global video_segmenter
     data = request.json
     video_segmenter = VideoSegmentation(model_cfg, checkpoint, video_dir)
-    session['status'] = "Starting mask propagation through video.\nThis may take a moment..."
+    set_status("Starting mask propagation through video.\nThis may take a moment...")
+    update_status()
     video_segmenter.init_inference_state()
     # Check if the data contains at least one object
     if not data or len(data) == 0:
@@ -275,10 +280,12 @@ def propagate_segmentation():
             labels=labels
         )
     # Step 2: Propagate the segmentation through the video
-    session['status'] = "Propagating through video"
+    set_status("Propagating through video")
+    update_status()
     video_segmenter.propagate_segmentation()
     # Step 3: Render the propagated masks and return base64 images
-    session['status'] = "Rendering video with masks"
+    set_status("Rendering video with masks")
+    update_status()
     video_segmenter.render_propagated_masks(data, display_video=False, video_name="segmented_video")
     # Free GPU memory after the task is done
     del video_segmenter
@@ -334,6 +341,25 @@ def get_status():
     #Retrieve the status message from the session
     status = session.pop('status', "Waiting")
     return jsonify({'message' : status})
+
+@app.route('/update_status', methods=['GET'])
+def update_status():
+    """
+    Send the current status to the frontend.
+    This route will be called repeatedly to update the wait window.
+    """
+    global status_message
+    return jsonify({'message': status_message})
+
+# For demonstration, a route to change the status on the server
+@app.route('/set_status/<new_status>', methods=['POST'])
+def set_status(new_status):
+    """
+    Update the status_message (for example, called internally or via another service).
+    """
+    global status_message
+    status_message = new_status
+    return jsonify({'message': f'Status updated to "{new_status}"'}), 200
 #--------------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------
