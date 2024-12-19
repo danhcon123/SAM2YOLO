@@ -7,8 +7,8 @@ from scipy.ndimage import binary_dilation
 import io
 import subprocess
 import base64
-import time
 import cv2
+from app import update_status, set_status
 
 class VideoSegmentation:
     def __init__(self, model_cfg, checkpoint, video_dir, device=None):
