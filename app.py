@@ -27,7 +27,7 @@ RENDERED_FRAME_FOLDER = '/home/gauva/flask_app/static/rendered_frames/'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # Initialize the VideoSegmentation object globally
-status_message = "Waiting"
+status_message = ""
 model_cfg = "sam2_hiera_l.yaml"
 checkpoint = "/home/gauva/sam2/segment-anything-2/checkpoints/sam2_hiera_large.pt"
 video_dir = FRAME_FOLDER
@@ -95,7 +95,7 @@ def upload(): #Upload video
         #If file is allowed and has an appropiate extension
         if file and allowed_file(file.filename):
             #session['status'] = "Uploading video and separating frames"
-            set_status("Uploading video and separating frames")
+            set_status("Uploading video and separating frames...")
             update_status()
             filename = file.filename
             video_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
@@ -342,6 +342,7 @@ def get_status():
     status = session.pop('status', "Waiting")
     return jsonify({'message' : status})
 
+# Send status to frontend
 @app.route('/update_status', methods=['GET'])
 def update_status():
     """
