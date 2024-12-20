@@ -8,14 +8,14 @@ import io
 import subprocess
 import base64
 import cv2
-from app import update_status, set_status
+#from app import update_status, set_status
 
 class VideoSegmentation:
-    def __init__(self, model_cfg, checkpoint, video_dir, device=None):
+    def __init__(self, model_cfg, checkpoint, video_dir, yolo_data, device=None):
         self.model_cfg = model_cfg
         self.checkpoint = checkpoint
         self.video_dir = video_dir
-        
+        self.yolo_data = yolo_data
     # Select device for computation
         if device:
             self.device = device
@@ -75,6 +75,7 @@ class VideoSegmentation:
         )
         return out_obj_ids, out_mask_logits
 
+    # Apply maskes to a image
     def apply_mask_on_image(self, image, mask, color=(255, 0, 0), alpha=0.3, border_thickness=5):
         if len(mask.shape) == 3:
             mask = np.squeeze(mask, axis=0)  # Removes the first dimension
@@ -94,8 +95,11 @@ class VideoSegmentation:
         overlay.paste(colored_mask, (0, 0), mask_image)
         # Composite the original image with the overlay (mask) using transparency
         result = Image.alpha_composite(image, overlay)
-        # Calculate the bounding box coordinates from the mask
+        
+        # Bounding box storage
         non_zero_points = np.argwhere(mask > 0)
+
+        # Calculate the bounding box coordinates from the mask
         if non_zero_points.size > 0:
             top_left = np.min(non_zero_points, axis=0)  # (y_min, x_min)
             bottom_right = np.max(non_zero_points, axis=0)  # (y_max, x_max)
@@ -108,6 +112,8 @@ class VideoSegmentation:
             )
         return result
     
+    
+    #Apply Maskes to the whole video 
     def render_image_with_masks(self, frame_image, out_obj_ids, out_mask_logits, data):
         # Loop over the object IDs and their corresponding mask logits
         for i, out_obj_id in enumerate(out_obj_ids):
@@ -143,7 +149,12 @@ class VideoSegmentation:
 
     def render_propagated_masks(self, data, display_video=False, video_name="output_video"):
         """Renders masks for each propagated frame, saves them in static/rendered_frames/,
-            and creates an mp4 video after processing all frames."""
+            and creates an mp4 video after processing all frames.
+            Also extract YOLO bbox data"""
+        # Initialize YOLO data storage if not already done
+        if not hasattr(self, 'yolo_data'):
+            self.yolo_data = []
+            
         # Directory to save rendered frames
         rendered_frames_dir = os.path.join("static", "rendered_frames")
         os.makedirs(rendered_frames_dir, exist_ok=True)
@@ -154,7 +165,6 @@ class VideoSegmentation:
         
         # Use a single window name for all frames
         window_name = "Video"
-        
         # Iterate over each frame and mask     
         for frame_idx, obj_masks in self.video_segments.items():
             # Load the corresponding frame image using OpenCV
@@ -225,7 +235,35 @@ class VideoSegmentation:
                                           (text_position[0] + text_width, text_position[1]+2), color_bgr, -1)  # Bottom-right corner of the background rectangle
                             cv2.putText(frame_image, object_id_text, text_position, cv2.FONT_HERSHEY_SIMPLEX, 2,
                                         (255,255,255), 3, cv2.LINE_AA)
+                            # Convert bounding box to YOLO format
+                            x_min = top_left[1]
+                            y_min = top_left[0]
+                            x_max = bottom_right[1]
+                            y_max = bottom_right[0]
 
+                            # Calculate YOLO coordinates
+                            x_center = (x_min + x_max) / 2.0
+                            y_center = (y_min + y_max) / 2.0
+                            width = x_max - x_min
+                            height = y_max - y_min
+
+                            # Normalize
+                            x_center_norm = x_center / frame_width
+                            y_center_norm = y_center / frame_height
+                            width_norm = width / frame_width
+                            height_norm = height / frame_height
+
+                            # Store YOLO data
+                            #if self.yolo_data is not None:
+                            #    self.yolo_data=[]
+                                
+                            # Assume out_obj_id is the class_id
+                            self.yolo_data.append({
+                                'frame': frame_idx,
+                                'object_id': out_obj_id,
+                                'bbox': [out_obj_id, x_center_norm, y_center_norm, width_norm, height_norm]
+                            })
+                        break
             # Add black rectangle for background of the frame number
             cv2.rectangle(frame_image, (10, 10), (200, 80), (0, 0, 0), -1)
             
@@ -256,8 +294,47 @@ class VideoSegmentation:
             cv2.destroyAllWindows()        
         print(f"Video created at {video_output_path}")
         convert_avi_to_mp4(video_output_path)
+            
+    #Return this yolo_data
+    def get_yolo_data(self):
+        grouped_data={}
+        for entry in self.yolo_data:
+            frame = entry['frame']
+            obj_id = entry['object_id']
+            bbox = entry['bbox']
+            # If this frame is not yet in grouped_data, initialize it
+            if frame not in grouped_data:
+                grouped_data[frame] = {
+                    'frame': frame,
+                    'objects': []
+                }
+            # Add this object's annotation to the frame's 'objects' list
+            grouped_data[frame]['objects'].append({
+                'object_id': obj_id,
+                'bbox': bbox
+            })
+            # Convert the dictionary into a list of frames
+            result = list(grouped_data.values())
+            file_path = os.path.join("/home/gauva/flask_app/", "get_yolo_data.txt")
+            with open(file_path, 'w') as file:
+                file.write(f"{self.yolo_data}")
+            print(f"Saved YOLO data to {file_path}")
+        return result
         
+    def get_yolo_data(self):
+        return self.yolo_data
 
+    def del_objects_from_frame(self, frame_id):
+        """
+        Deletes all objects and their bounding boxes from the specified frame_id to the end of the list.
+        :param frame_id: The frame number from which to start deleting.
+        """
+        # Keep only frames with 'frame' < frame_id
+        self.get_yolo_data = [entry for entry in self.yolo_data if entry['frame'] < frame_id]
+        return self.get_yolo_data
+
+    
+    
 def darken_color(color, factor=0.5):
     """
     Darken the given color by multiplying its RGB (or BGR) components by the factor.

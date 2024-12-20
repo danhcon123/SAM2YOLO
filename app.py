@@ -34,7 +34,8 @@ video_dir = FRAME_FOLDER
 global_objects = [] #Stores the object button for the not first time propagation
 global_iteration = 0
 app.config['MAX_CONTENT_LENGTH'] = 1000 * 1024 * 1024 #1GB
- 
+global_bbox=[]
+
 #Allowed file extensions (videos)
 ALLOWED_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv', 'webp', 'm4v'}
  
@@ -173,7 +174,8 @@ def choose_frame():
 #Save positive and negative coordinates to use SAM2 on it
 @app.route('/generate_mask', methods=['POST'])
 def generate_mask():
-    video_segmenter = VideoSegmentation(model_cfg, checkpoint, video_dir)
+    global global_bbox
+    video_segmenter = VideoSegmentation(model_cfg, checkpoint, video_dir, global_bbox)
     video_segmenter.init_inference_state()
     data = request.json   
     # Check if the data contains at least one object
@@ -224,6 +226,9 @@ def generate_mask():
         
 @app.route('/propagate_segmentation', methods=['POST'])
 def propagate_segmentation():
+    global global_bbox
+    global global_objects
+
     # Path to the file to delete
     output_file_path = os.path.join('static', 'uploads', 'output.mp4')
     
@@ -234,11 +239,10 @@ def propagate_segmentation():
     else:
         print(f"File not found: {output_file_path}")
 
-    global global_objects
     global_objects = []  # Reset the global_objects array at the start of each iteration
     #global video_segmenter
     data = request.json
-    video_segmenter = VideoSegmentation(model_cfg, checkpoint, video_dir)
+    video_segmenter = VideoSegmentation(model_cfg, checkpoint, video_dir,global_bbox)
     set_status("Starting mask propagation through video.\nThis may take a moment...")
     update_status()
     video_segmenter.init_inference_state()
@@ -279,6 +283,8 @@ def propagate_segmentation():
             points=points,
             labels=labels
         )
+    if global_bbox is not None:
+        video_segmenter.del_objects_from_frame(ann_frame_idx)
     # Step 2: Propagate the segmentation through the video
     set_status("Propagating through video")
     update_status()
@@ -287,6 +293,8 @@ def propagate_segmentation():
     set_status("Rendering video with masks")
     update_status()
     video_segmenter.render_propagated_masks(data, display_video=False, video_name="segmented_video")
+    global_bbox=video_segmenter.get_yolo_data()
+    print("global_bbox = ", global_bbox)
     # Free GPU memory after the task is done
     del video_segmenter
     torch.cuda.empty_cache()
