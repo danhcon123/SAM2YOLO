@@ -45,6 +45,10 @@ class VideoSegmentation:
         # Load model
         self.predictor = build_sam2_video_predictor(self.model_cfg, self.checkpoint, device=self.device)
 
+    def update_status(self, message):
+        print(message)
+        return message
+    
     def init_inference_state(self):
         # Scan all the JPEG frame names in the video directory
         self.frame_names = [
@@ -153,7 +157,7 @@ class VideoSegmentation:
             Also extract YOLO bbox data"""
         # Initialize YOLO data storage if not already done
         if not hasattr(self, 'yolo_data'):
-            self.yolo_data = []
+            self.yolo_data = [] 
             
         # Directory to save rendered frames
         rendered_frames_dir = os.path.join("static", "rendered_frames")
@@ -165,7 +169,19 @@ class VideoSegmentation:
         
         # Use a single window name for all frames
         window_name = "Video"
-        # Iterate over each frame and mask     
+        # Clean the list yolo_data if there are any elements from objects in the first frame to the objects in the last frame
+        try:
+            first_frame = next(iter(self.video_segments.items()))[0]
+            print(f"First frame number: {first_frame}")
+            
+            # Check if YOLO data exists and delete objects from the first frame onward
+            if self.yolo_data is not None:
+                self.del_objects_from_frame(first_frame)
+                
+        except Exception as e:
+            print(f"Error: {e}")
+            
+        # Iterate over each frame and mask
         for frame_idx, obj_masks in self.video_segments.items():
             # Load the corresponding frame image using OpenCV
             frame_image_path = os.path.join(self.video_dir, f"{frame_idx}.jpg")
@@ -252,18 +268,16 @@ class VideoSegmentation:
                             y_center_norm = y_center / frame_height
                             width_norm = width / frame_width
                             height_norm = height / frame_height
-
-                            # Store YOLO data
-                            #if self.yolo_data is not None:
-                            #    self.yolo_data=[]
                                 
                             # Assume out_obj_id is the class_id
                             self.yolo_data.append({
                                 'frame': frame_idx,
                                 'object_id': out_obj_id,
-                                'bbox': [out_obj_id, x_center_norm, y_center_norm, width_norm, height_norm]
+                                'bbox': [x_center_norm, y_center_norm, width_norm, height_norm]
                             })
                         break
+            print(type(self.yolo_data))
+
             # Add black rectangle for background of the frame number
             cv2.rectangle(frame_image, (10, 10), (200, 80), (0, 0, 0), -1)
             
@@ -284,7 +298,7 @@ class VideoSegmentation:
                 cv2.imshow(window_name, resized_frame)
                 if cv2.waitKey(25) & 0xFF == ord('q'):  # Press 'q' to quit early
                     break
-        
+            
         #Release the video writer if it's initialized
         if video_writer is not None:
             video_writer.release()
@@ -293,33 +307,30 @@ class VideoSegmentation:
         if display_video:
             cv2.destroyAllWindows()        
         print(f"Video created at {video_output_path}")
+        self.update_status("Prepairing rendered video")
         convert_avi_to_mp4(video_output_path)
-            
-    #Return this yolo_data
-    def get_yolo_data(self):
-        grouped_data={}
-        for entry in self.yolo_data:
-            frame = entry['frame']
-            obj_id = entry['object_id']
-            bbox = entry['bbox']
-            # If this frame is not yet in grouped_data, initialize it
+    
+    def group_by_frame(yolo_data):
+        """
+        Groups objects that have the same frame number together.
+
+        Args:
+            yolo_data (list): List of dictionaries containing frame information.
+
+        Returns:
+            dict: A dictionary where the key is the frame number and the value is a list of objects in that frame.
+        """
+        grouped_data = {}
+
+        for entry in yolo_data:
+            frame = entry.get('frame')
+            if frame is None:
+                raise ValueError("Missing 'frame' key in YOLO data entry")
             if frame not in grouped_data:
-                grouped_data[frame] = {
-                    'frame': frame,
-                    'objects': []
-                }
-            # Add this object's annotation to the frame's 'objects' list
-            grouped_data[frame]['objects'].append({
-                'object_id': obj_id,
-                'bbox': bbox
-            })
-            # Convert the dictionary into a list of frames
-            result = list(grouped_data.values())
-            file_path = os.path.join("/home/gauva/flask_app/", "get_yolo_data.txt")
-            with open(file_path, 'w') as file:
-                file.write(f"{self.yolo_data}")
-            print(f"Saved YOLO data to {file_path}")
-        return result
+                grouped_data[frame] = []
+            grouped_data[frame].append(entry)
+
+        return grouped_data
         
     def get_yolo_data(self):
         return self.yolo_data
@@ -330,9 +341,9 @@ class VideoSegmentation:
         :param frame_id: The frame number from which to start deleting.
         """
         # Keep only frames with 'frame' < frame_id
-        self.get_yolo_data = [entry for entry in self.yolo_data if entry['frame'] < frame_id]
-        return self.get_yolo_data
-
+        self.yolo_data = [entry for entry in self.yolo_data if entry['frame'] < frame_id]
+        print(f"yolo_data after got deleted from frame {frame_id}: ", self.yolo_data)
+        #return self.yolo_data
     
     
 def darken_color(color, factor=0.5):

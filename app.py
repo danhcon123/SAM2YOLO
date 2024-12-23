@@ -239,7 +239,7 @@ def propagate_segmentation():
     else:
         print(f"File not found: {output_file_path}")
 
-    global_objects = []  # Reset the global_objects array at the start of each iteration
+    #global_objects = []  # Reset the global_objects array at the start of each iteration
     #global video_segmenter
     data = request.json
     video_segmenter = VideoSegmentation(model_cfg, checkpoint, video_dir,global_bbox)
@@ -283,8 +283,9 @@ def propagate_segmentation():
             points=points,
             labels=labels
         )
-    if global_bbox is not None:
-        video_segmenter.del_objects_from_frame(ann_frame_idx)
+    print(global_bbox)
+    #if global_bbox is not None:
+    #    video_segmenter.del_objects_from_frame(ann_frame_idx)
     # Step 2: Propagate the segmentation through the video
     set_status("Propagating through video")
     update_status()
@@ -293,7 +294,7 @@ def propagate_segmentation():
     set_status("Rendering video with masks")
     update_status()
     video_segmenter.render_propagated_masks(data, display_video=False, video_name="segmented_video")
-    global_bbox=video_segmenter.get_yolo_data()
+    global_bbox = video_segmenter.get_yolo_data()
     print("global_bbox = ", global_bbox)
     # Free GPU memory after the task is done
     del video_segmenter
