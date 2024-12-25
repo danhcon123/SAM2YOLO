@@ -31,7 +31,7 @@
             display: flex;
             flex-direction: column;  /* Stack buttons vertically */
             gap: 10px;  /* Space between buttons */
-            margin-top: 48px; /* Align with video by offsetting the h2 height */
+            /*margin-top: 48px; /* Align with video by offsetting the h2 height */
         }
     
         .styled-button {
@@ -74,7 +74,7 @@
         /* 4-column grid layout for thumbnails */
         .frame-container {
             display: grid;
-            grid-template-columns: repeat(5, 1fr); /* 4 columns */
+            grid-template-columns: repeat(5, 1fr); /* 5 columns */
             grid-gap: 10px; /* Space between thumbnails */
         }
  
@@ -333,21 +333,22 @@
         </div>
 
         <div id="objects-container">
-            {% for object_id, object_data in objects.items() %}
+            {% for obj in global_objects %}
             <div class="object-row">
                 <div class="object-id">
-                    <label>ID: {{ object_id }}</label>
+                    <label>ID: {{ obj.id }}</label>
                 </div>
                 <div class="class-id-input">
                     <input type="text" 
-                           id="class_id_{{ object_id }}" 
+                           id="class_id_{{ obj.id }}" 
                            placeholder="Enter class ID"
-                           value="{{ object_data.class_id }}"
+                           value="{{ objects[obj.id|string].class_id if objects[obj.id|string] else '' }}"
                            pattern="[0-9]*"
                            onkeypress="return event.charCode >= 48 && event.charCode <= 57"
                            oninput="this.value = this.value.replace(/[^0-9]/g, '')"
                            >
                 </div>
+                <div class="object-color" style="background-color: {{ obj.color }}"></div>
             </div>
             {% endfor %}
         </div>
@@ -453,17 +454,19 @@
             return;
         }
 
-        const objects = {{ objects|tojson }};
+        const global_objects = {{ global_objects|tojson }};
+        console.log("global_objects", global_objects);
         let objectData = {};
         
-        for (const objectId in objects) {
-            const classIdInput = document.getElementById(`class_id_${objectId}`);
+        for (const obj in global_objects) {
+            const classIdInput = document.getElementById(`class_id_${obj.id}`);
             if (!classIdInput.value) {
                 alert('Please fill in all class IDs');
                 return;
             }
-            objectData[objectId] = {
-                class_id: classIdInput.value
+            objectData[obj.id] = {
+                obj_id: obj.id,
+                class_id: classIdInput.value,
             };
         }
 
@@ -474,7 +477,7 @@
             },
             body: JSON.stringify({
                 project_name: projectName,
-                objects: objectData
+                objects: objectData,
             })
         })
         .then(response => response.json())

@@ -146,7 +146,7 @@ def result():
         #Get list of all saved frames to display them in the choosing_frame page
     frames = os.listdir(RENDERED_FRAME_FOLDER)
     frames = sorted([f for f in frames if f.endswith('.jpg')], key=lambda x: int(x[:-4])) #Filter to only include .jpg image
-    return render_template('result.html', frames=frames, objects=objects)
+    return render_template('result.html', frames=frames, objects=objects, global_objects=global_objects)
 
 
 #--------------------------------------------------------------------------------------------
@@ -382,7 +382,9 @@ def update_objects():
     data = request.json
     project_name = data['project_name']
     object_data = data['objects']
-    
+    print("project_name: ", project_name)
+    print("object_data: ", object_data)
+
     # Convert to the desired format
     formatted_data = [
         {"object": str(obj_id), "class_id": obj_data["class_id"]}
