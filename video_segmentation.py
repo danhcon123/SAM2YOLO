@@ -276,8 +276,6 @@ class VideoSegmentation:
                                 'bbox': [x_center_norm, y_center_norm, width_norm, height_norm]
                             })
                         break
-            print(type(self.yolo_data))
-
             # Add black rectangle for background of the frame number
             cv2.rectangle(frame_image, (10, 10), (200, 80), (0, 0, 0), -1)
             

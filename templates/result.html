@@ -7,16 +7,18 @@
             position: relative;/* Make the video container the reference point for the spinner */
             width: 640px;
             height: 480px;
-            margin: 0 auto; /* Center the video container on the page */
+            /*margin: 0 auto;  Center the video container on the page */
         }
         /* Video upload form and video player positioned 60px below header */
         .video-section {
             display: flex;
-            flex-direction: column;  /* Stack elements vertically */
-            justify-content: center;
-            align-items: center;
+            flex-direction: row;  /* Keep elements horizontal */
+            align-items: flex-start; /* Align items at the top */
+            gap: 10px;  /* Reduced gap between video and buttons */
             font-family: 'Arial', sans-serif;
-        }
+            justify-content: center; /* Center the content */
+            width: 100%; /* Take full width */
+        }    
         /* Container for buttons and form */
         .controls {
             margin-top: 50px;
@@ -25,12 +27,26 @@
             justify-content: center;
         }
        
+        .buttons-column {
+            display: flex;
+            flex-direction: column;  /* Stack buttons vertically */
+            gap: 10px;  /* Space between buttons */
+            margin-top: 48px; /* Align with video by offsetting the h2 height */
+        }
+    
+        .styled-button {
+            width: 120px;  /* Set a fixed width for buttons */
+        }
+
         /* Video player styling */
         video{
             margin-top: 0px;
             background-color: #000000;
         }
-
+        .video-content {
+            flex-shrink: 0; /* Prevent video content from shrinking */
+        }
+    
         /* Main layout: 2 sections side by side */
         .container {
             display: flex;
@@ -51,7 +67,7 @@
             overflow-y: auto; /* Allows vertical scrolling */
             padding: 10px;
             box-sizing: border-box;
-            margin-top: 20px !important; /* Force 20px space below video */        
+            /*margin-top: 20px !important; /* Force 20px space below video */        
         }
 
  
@@ -140,31 +156,122 @@
         .popup-buttons button:hover {
             background-color: #02454a;
         }
+
+        .popup {
+            display: none;
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #333333;
+            padding: 20px;
+            border: 1px solid #222;
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            z-index: 1000;
+            color: white;
+            min-width: 300px;
+        }
+
+        .popup-header {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .close-button {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            width: 24px;
+            height: 24px;
+            background-color: #444;
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-button:hover {
+            background-color: #555;
+        }
+
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 999;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: white;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+        }
+
+        .object-row {
+            margin-bottom: 15px;
+            padding: 10px;
+            border: 1px solid #444;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+        }
+
+        .object-id {
+            width: 80px;
+            margin-right: 10px;
+        }
+
+        .class-id-input {
+            flex-grow: 1;
+        }
+
+        .buttons-container {
+            text-align: right;
+            margin-top: 20px;
+        }
+
+        .project-name {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #444;
+        }
+
+        /* Style for invalid input */
+        input:invalid {
+            border-color: #ff4444;
+        }
         
     </style>
 {% endblock %}
  
 {% block content %}   
     <!-- Video upload form and uploaded video player section -->
-    <div class="video-section">
-        <!-- Uploaded video player -->
-        <h2>Display video with maskes</h2>
-       
-         <!-- Spinner Wrapper, which includes the spinner and the message -->
-        <div class="video-container">
-            <div id="spinner-wrapper" class="spinner-wrapper" style="display: none;">
-                <div class="spinner"></div>        <!-- Loading spinner -->
-                <div class="message">Frames analyzing, please wait...</div>
-            </div>
- 
-            <video id="uploadedVideo" width="640" height="480" controls>
-                <source id="videoSource" src="{{ url_for('static', filename='uploads/output.mp4') }}" type="video/mp4">
-                Your browser does not support the video tag.
-            </video>
-        </div>
-    </div>
+    <h2>Display video with maskes</h2>
+        <div class="video-section">
          <!-- Section 1: Thumbnails of all frames (4-column grid layout) -->
-         <div class="frame-section">
+         <div class="frame-section" id="frameSection">
             <h2 style="color:white;">Frames</h2> <!-- Text color white to contrast with background -->
             <div class="frame-container">
                 {% for frame in frames %}
@@ -175,7 +282,28 @@
                 </div>
                 {% endfor %}
             </div>
-    </div>
+        </div>
+        <div class="video-content">  <!-- Added class for video wrapper -->
+            <!-- Uploaded video player -->       
+            <!-- Spinner Wrapper, which includes the spinner and the message -->
+                <div class="video-container">
+                    <div id="spinner-wrapper" class="spinner-wrapper" style="display: none;">
+                        <div class="spinner"></div>        <!-- Loading spinner -->
+                        <div class="message">Frames analyzing, please wait...</div>
+                    </div>
+                    <video id="uploadedVideo" width="640" height="480" controls>
+                        <source id="videoSource" src="{{ url_for('static', filename='uploads/output.mp4') }}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                </div>
+            <!-- Export and Edit buttons -->       
+                <div class="buttons-column">
+                    <button id="export-button" class="styled-button" onclick="showPopup()">Export</button>
+                    <button id="edit-button" class="styled-button" onclick="scrollToFrameSection()">Edit</button>
+                </div>
+            </div>
+
+
     <!-- Popup modal for showing selected image -->
     <div id="imagePopup" class="image-popup" style="display:none;">
         <div class="popup-content">
@@ -188,10 +316,64 @@
             </div>
         </div>
     </div>
+
+    <!-- Popup modal for editing object's classes and export in YOLO-Data format-->
+    <div id="overlay" class="overlay"></div>
+    <div id="popup" class="popup">
+        <div class="popup-header">
+            <button class="close-button" onclick="hidePopup()">x</button>
+            <h2>Object Classification</h2>
+        </div>
+        
+        <div class="project-name">
+            <div class="form-group">
+                <label>Project Name:</label>
+                <input type="text" id="project_name" placeholder="Enter project name">
+            </div>
+        </div>
+
+        <div id="objects-container">
+            {% for object_id, object_data in objects.items() %}
+            <div class="object-row">
+                <div class="object-id">
+                    <label>ID: {{ object_id }}</label>
+                </div>
+                <div class="class-id-input">
+                    <input type="text" 
+                           id="class_id_{{ object_id }}" 
+                           placeholder="Enter class ID"
+                           value="{{ object_data.class_id }}"
+                           pattern="[0-9]*"
+                           onkeypress="return event.charCode >= 48 && event.charCode <= 57"
+                           oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                           >
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="buttons-container">
+            <button class="styled-button" onclick="exportData()">Export</button>
+        </div>
+    </div>
+
+
     <script>
         const frames = [ {% for frame in frames %} "{{ frame }}", {% endfor %} ]; // List of frames
         let currentIndex = 0; // To track the current image index
         let iteration = 0;
+
+    // Scroll to the frame section
+    function scrollToFrameSection() {
+        const frameSection = document.getElementById('frameSection');
+        if (frameSection) {
+            frameSection.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'start' 
+            });
+        }
+    }
+
     // Open the popup with the selected image
     function openImagePopup(frame, index) {
         currentIndex = index;
@@ -253,6 +435,57 @@
             }
         })
         .catch(error => console.error('Error:', error));
+    }
+    function showPopup() {
+        document.getElementById('popup').style.display = 'block';
+        document.getElementById('overlay').style.display = 'block';
+    }
+
+    function hidePopup() {
+        document.getElementById('popup').style.display = 'none';
+        document.getElementById('overlay').style.display = 'none';
+    }
+
+    function exportData() {
+        const projectName = document.getElementById('project_name').value;
+        if (!projectName) {
+            alert('Please enter a project name');
+            return;
+        }
+
+        const objects = {{ objects|tojson }};
+        let objectData = {};
+        
+        for (const objectId in objects) {
+            const classIdInput = document.getElementById(`class_id_${objectId}`);
+            if (!classIdInput.value) {
+                alert('Please fill in all class IDs');
+                return;
+            }
+            objectData[objectId] = {
+                class_id: classIdInput.value
+            };
+        }
+
+        fetch('/update_objects', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                project_name: projectName,
+                objects: objectData
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert('Data exported successfully!');
+            hidePopup();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error exporting data');
+        });
     }
     </script>
  {% endblock %}

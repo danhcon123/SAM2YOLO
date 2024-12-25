@@ -32,6 +32,13 @@ model_cfg = "sam2_hiera_l.yaml"
 checkpoint = "/home/gauva/sam2/segment-anything-2/checkpoints/sam2_hiera_large.pt"
 video_dir = FRAME_FOLDER
 global_objects = [] #Stores the object button for the not first time propagation
+# Simulating a database of objects
+objects = {
+    1: {"class_id": ""},
+    2: {"class_id": ""},
+    3: {"class_id": ""},
+    4: {"class_id": ""}
+}
 global_iteration = 0
 app.config['MAX_CONTENT_LENGTH'] = 1000 * 1024 * 1024 #1GB
 global_bbox=[]
@@ -78,7 +85,7 @@ def request_entity_too_large(error):
 @app.route('/')
 def home():
     return render_template('upload.html')
- 
+
 # Route for the about page
 @app.route('/upload', methods = ['GET', 'POST'])
 def upload(): #Upload video
@@ -139,7 +146,7 @@ def result():
         #Get list of all saved frames to display them in the choosing_frame page
     frames = os.listdir(RENDERED_FRAME_FOLDER)
     frames = sorted([f for f in frames if f.endswith('.jpg')], key=lambda x: int(x[:-4])) #Filter to only include .jpg image
-    return render_template('result.html', frames=frames)
+    return render_template('result.html', frames=frames, objects=objects)
 
 
 #--------------------------------------------------------------------------------------------
@@ -239,8 +246,7 @@ def propagate_segmentation():
     else:
         print(f"File not found: {output_file_path}")
 
-    #global_objects = []  # Reset the global_objects array at the start of each iteration
-    #global video_segmenter
+    global_objects = []  # Reset the global_objects array at the start of each iteration
     data = request.json
     video_segmenter = VideoSegmentation(model_cfg, checkpoint, video_dir,global_bbox)
     set_status("Starting mask propagation through video.\nThis may take a moment...")
@@ -370,6 +376,23 @@ def set_status(new_status):
     global status_message
     status_message = new_status
     return jsonify({'message': f'Status updated to "{new_status}"'}), 200
+
+@app.route('/update_objects', methods=['POST'])
+def update_objects():
+    data = request.json
+    project_name = data['project_name']
+    object_data = data['objects']
+    
+    # Convert to the desired format
+    formatted_data = [
+        {"object": str(obj_id), "class_id": obj_data["class_id"]}
+        for obj_id, obj_data in object_data.items()
+    ]
+    
+    print(f"Project Name: {project_name}")
+    print("Formatted Data:", formatted_data)
+    
+    return jsonify({"status": "success"})
 #--------------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------
