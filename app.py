@@ -1,9 +1,8 @@
 #app für sam2
 from flask import Flask, render_template, request, send_file, url_for, redirect, jsonify, send_from_directory,session
-
 import os
-import cv2
-from video_segmentation import VideoSegmentation
+from src.helper import *
+from src.video_segmentation import VideoSegmentation
 import numpy as np
 from PIL import Image
 import torch
@@ -19,29 +18,33 @@ app.secret_key = '017643771350'
 #--------------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------
- 
-#Set the foleder where uploaded files will be saved
-UPLOAD_FOLDER = '/home/gauva/flask_app/static/uploads/'
-FRAME_FOLDER = '/home/gauva/flask_app/static/frames/'
-RENDERED_FRAME_FOLDER = '/home/gauva/flask_app/static/rendered_frames/'
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+print(BASE_DIR)
+# Construct paths relative to the base directory
+UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads')
+FRAME_FOLDER = os.path.join(BASE_DIR, 'static', 'frames')
+RENDERED_FRAME_FOLDER = os.path.join(BASE_DIR, 'static', 'rendered_frames')
 
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+'''
+#TODO: GIT and delete line 42
+# Get the SAM2 directory
+# Get the directory of the project (one level above SAM2YOLO)
+PROJECT_DIR = os.path.dirname(BASE_DIR)
+# Construct the path to the file in 'sam2/checkpoints'
+CHECKPOINT_PATH = os.path.join(PROJECT_DIR, 'sam2', 'checkpoints', 'sam2.1_hiera_large.pt')
+# Normalize the path for the operating system
+checkpoint= os.path.normpath(CHECKPOINT_PATH)
+'''
 # Initialize the VideoSegmentation object globally
 status_message = ""
-model_cfg = "sam2_hiera_l.yaml"
-checkpoint = "/home/gauva/sam2/segment-anything-2/checkpoints/sam2_hiera_large.pt"
+model_cfg = "configs/sam2.1/sam2.1_hiera_l.yaml"
+checkpoint = "/home/gauva/sam2/checkpoints/sam2.1_hiera_large.pt" #DELETE
 video_dir = FRAME_FOLDER
-global_objects = [] #Stores the object button for the not first time propagation
-# Simulating a database of objects
-objects = {
-    1: {"class_id": ""},
-    2: {"class_id": ""},
-    3: {"class_id": ""},
-    4: {"class_id": ""}
-}
-global_iteration = 0
+global_objects = [] #Stores the object buttons for the not first time propagating
+objects = {1: {"class_id": ""},2: {"class_id": ""},3: {"class_id": ""},4: {"class_id": ""}}# Simulating a database of objects
 app.config['MAX_CONTENT_LENGTH'] = 1000 * 1024 * 1024 #1GB
-global_bbox=[]
+global_bbox=[] #Store the bouding box in frame and object wise to give out the final YOLO's label data
 
 #Allowed file extensions (videos)
 ALLOWED_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv', 'webp', 'm4v'}
@@ -50,24 +53,6 @@ ALLOWED_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv', 'webp', 'm4v'}
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
  
-#Function to extract all the frames of the video
-def extract_all_frame(video_path, frame_dir):
-    cap = cv2.VideoCapture(video_path)
-    frame_count = 0
-    while True:
-        ret, frame = cap.read() #Read each frame
-        if not ret:
-            #If no more frame, break the loop
-            break
-        #Define a unique frame filename, like frame0.jpg, fram1.jpg, etc
-        frame_filename = f"{frame_count}.jpg"
-        frame_path = os.path.join(frame_dir, frame_filename)
-       
-        cv2.imwrite(frame_path, frame) # Save the frame as an image
-        frame_count += 1
-    #Release the video capture object
-    print("extract successfully")
-    cap.release()
 
 #--------------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------
@@ -103,8 +88,6 @@ def upload(): #Upload video
         #If file is allowed and has an appropiate extension
         if file and allowed_file(file.filename):
             #session['status'] = "Uploading video and separating frames"
-            set_status("Uploading video and separating frames...")
-            update_status()
             filename = file.filename
             video_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(video_path) #Save the file to the uploaded folder
@@ -213,8 +196,6 @@ def generate_mask():
         # Store the points and labels for this object
         prompts[ann_obj_id] = points, labels
         # Call the add_points method for the current object
-        set_status("Generating masks")
-        update_status()
         out_obj_ids, out_mask_logits = video_segmenter.add_points(
             ann_frame_idx=ann_frame_idx,
             ann_obj_id=ann_obj_id,
@@ -249,8 +230,6 @@ def propagate_segmentation():
     global_objects = []  # Reset the global_objects array at the start of each iteration
     data = request.json
     video_segmenter = VideoSegmentation(model_cfg, checkpoint, video_dir,global_bbox)
-    set_status("Starting mask propagation through video.\nThis may take a moment...")
-    update_status()
     video_segmenter.init_inference_state()
     # Check if the data contains at least one object
     if not data or len(data) == 0:
@@ -290,15 +269,9 @@ def propagate_segmentation():
             labels=labels
         )
     print(global_bbox)
-    #if global_bbox is not None:
-    #    video_segmenter.del_objects_from_frame(ann_frame_idx)
     # Step 2: Propagate the segmentation through the video
-    set_status("Propagating through video")
-    update_status()
     video_segmenter.propagate_segmentation()
     # Step 3: Render the propagated masks and return base64 images
-    set_status("Rendering video with masks")
-    update_status()
     video_segmenter.render_propagated_masks(data, display_video=False, video_name="segmented_video")
     global_bbox = video_segmenter.get_yolo_data()
     print("global_bbox = ", global_bbox)
@@ -331,6 +304,7 @@ def cleanup_files():
             print(f"File not found: {file}")
     # Function to delete all files in a directory
     for directory in directories_to_clean:
+        print(os.path) ####DELETE this line
         if os.path.exists(directory):
             # Delete all files in the directory
             for filename in os.listdir(directory):
@@ -357,44 +331,49 @@ def get_status():
     status = session.pop('status', "Waiting")
     return jsonify({'message' : status})
 
-# Send status to frontend
-@app.route('/update_status', methods=['GET'])
-def update_status():
-    """
-    Send the current status to the frontend.
-    This route will be called repeatedly to update the wait window.
-    """
-    global status_message
-    return jsonify({'message': status_message})
-
-# For demonstration, a route to change the status on the server
-@app.route('/set_status/<new_status>', methods=['POST'])
-def set_status(new_status):
-    """
-    Update the status_message (for example, called internally or via another service).
-    """
-    global status_message
-    status_message = new_status
-    return jsonify({'message': f'Status updated to "{new_status}"'}), 200
-
+#update object and export data in .zip file in YOLO format
 @app.route('/update_objects', methods=['POST'])
 def update_objects():
+    global global_bbox
     data = request.json
     project_name = data['project_name']
     object_data = data['objects']
-    print("project_name: ", project_name)
-    print("object_data: ", object_data)
-
+    yolo_data=[]
     # Convert to the desired format
     formatted_data = [
         {"object": str(obj_id), "class_id": obj_data["class_id"]}
         for obj_id, obj_data in object_data.items()
     ]
-    
-    print(f"Project Name: {project_name}")
-    print("Formatted Data:", formatted_data)
-    
-    return jsonify({"status": "success"})
+    yolo_data= change_object_to_class_id(global_bbox, formatted_data)
+    yolo_data = convert_to_yolo_format(yolo_data)
+    print("yolo_data: ", yolo_data)
+    try:        
+        # Create the dataset zip
+        zip_filename = f"{project_name}_dataset.zip"
+        zip_path = os.path.join(os.path.dirname(FRAME_FOLDER), zip_filename)
+        
+        success = create_dataset_zip(yolo_data, FRAME_FOLDER, project_name, zip_filename)
+        
+        if success and os.path.exists(zip_path):
+            return send_file(
+                zip_path,
+                mimetype='application/zip',
+                as_attachment=True,
+                download_name=zip_filename
+            )
+        else:
+            return jsonify({
+                "status": "error",
+                "message": "Failed to create ZIP file"
+            }), 500
+            
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+
 #--------------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------

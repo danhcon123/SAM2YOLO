@@ -101,41 +101,49 @@
 {% block content %}   
 
     <h2> Segmentating Image </h2>
-      <!-- Window containing buttons for adding new objects and hiding the window -->
-        <div id="image-container" style="position: relative; display: inline-block;">
-            <div id="object-window" class="window">
-                {%if file_exists %}
-                    <img id="old_image" class="thumbnail-image" 
-                    data-fullsrc="{{ url_for('static', filename='rendered_frames/' ~ filename)}}"
-                    src="{{ url_for('static', filename='rendered_frames/' ~ filename)}}" onclick="openImagePopup()">
-                {%endif%}
-                <button id="add-object-btn" class="styled-button">+ Add Object</button>
-                <!-- Object buttons will appear here -->
-                <div id="object-buttons"></div>
-            </div>
-            <img id="image" class="image" src="{{ url_for('static', filename='frames/' + filename)}}" alt="Chosen Frame">
-            
-            <!--Pop up window-->
-            <div id="imagePopup" class="image-popup" style="display:none;">
-                <div class="popup-content">
-                    <span class="close-btn" onclick="closeImagePopup()">&times;</span>
-                    <img id="popupImage" src="" alt="Selected Frame">
-                </div>
+
+    <!-- Window containing buttons for adding new objects and hiding the window -->
+    <div id="image-container" style="position: relative; display: inline-block;">
+
+        <!-- Spinner Wrapper -->
+        <div class="spinner-wrapper" id="waitWindow">
+            <div class="spinner"></div>
+            <div class="message"></div>
+        </div>
+        
+        <!-- Button Container -->
+        <div id="object-window" class="window">
+            {%if file_exists %}
+                <img id="old_image" class="thumbnail-image" 
+                data-fullsrc="{{ url_for('static', filename='rendered_frames/' ~ filename)}}"
+                src="{{ url_for('static', filename='rendered_frames/' ~ filename)}}" onclick="openImagePopup()">
+            {%endif%}
+            <button id="generate-button" class="styled-button" style="border-color: white; width: 200px;">Generating Masks</button>
+            <button id="video-propagation-button" class="styled-button" style="margin-top: 7px; border-color: white; width: 200px;">Video Propagation</button>
+            <button id="add-object-btn" class="styled-button" style="margin-top: 7px; border-color: white; width: 200px;">+ Add Object</button>
+            <!-- Object buttons will appear here -->
+            <div id="object-buttons"></div>
+        </div>
+
+        <!-- Main Image -->
+        <img id="image" class="image" src="{{ url_for('static', filename='frames/' + filename)}}" alt="Chosen Frame">
+        
+        <!--Pop up window-->
+        <div id="imagePopup" class="image-popup" style="display:none;">
+            <div class="popup-content">
+                <span class="close-btn" onclick="closeImagePopup()">&times;</span>
+                <img id="popupImage" src="" alt="Selected Frame">
             </div>
         </div>
-        <button id="generate-button" class="styled-button">Generating Masks</button>
-        <button id="video-propagation-button" class="styled-button">Video Propagation</button>   
-    <!-- Debugging coordinates -->
-    <h3>Click Coordinates (Relative to Image):</h3>
-    <ul id="coordinates-list"></ul>
-   
+    </div>   
+
     <script>
         //------------------------------------------------------------------------------------------------
         //------------------------------------------------------------------------------------------------
         //--------------------Object window---------------------------------------------------------------
         //------------------------------------------------------------------------------------------------
         //------------------------------------------------------------------------------------------------
-
+        
         //Object windows
         const objectWindow = document.getElementById('object-window');
         const addObject = document.getElementById('add-object-btn');
@@ -213,6 +221,8 @@
         //Call funcitons when page is loaded
         
         document.addEventListener('DOMContentLoaded', async function() {
+            const waitWindow = document.getElementById('waitWindow');
+            waitWindow.style.display = 'none'; // Explicitly hide on page load
             await loadObjectsListFromBackend();
             console.log("DOMContentLoaded");
             if (objectsList_temp.length > 0) {
@@ -240,8 +250,9 @@
                     });
                 });
                 console.log("objectsList (after) for-loop: ", objectsList);
-                
             }
+            // Add event listeners for buttons
+            setupButtonListeners()
         });
 
         // Main event listener for the Add Object button
@@ -279,8 +290,6 @@
         //------------------------------------------------------------------------------------------------
         //------------------------------------------------------------------------------------------------
 
-        const coordsDisplay = document.getElementById('coordinates-list');
-        //Prevent defaut for context menu -> right click = no this default setting
         document.addEventListener('contextmenu', function(event) {
             event.preventDefault(); // Prevent the default context menu globally
         });
@@ -295,6 +304,7 @@
         img.addEventListener('mousedown', function(event){
             if (activeObjectId==null){
                 alert('Please select an object first');
+                //showNotification('Please select an object first', 3000);
                 return;
             }
             
@@ -342,10 +352,7 @@
                 activeObject.frames.push(currentFrame);
             }
             console.log(activeObject);
-            //Display the clicked coordinates in the list for debugging
-            const li = document.createElement('li');
-            li.textContent = `(x: ${adjustedX.toFixed(0)}, y: ${adjustedY.toFixed(0)}, label: ${label})`;
-            coordsDisplay.appendChild(li);
+
             // Convert x and y to percentages for responsive positioning
             const xPercent = (x / displayedWidth) * 100;
             const yPercent = (y / displayedHeight) * 100;
@@ -372,7 +379,6 @@
                imageContainer.removeChild(star); //Remove star from the DOM
                activeObject.points.splice(starId.split('-')[2], 1); // Remove the point from the points array
                activeObject.labels.splice(starId.split('-')[2], 1); // Remove the label from the labels array       
-               li.remove();
                console.log(activeObject.points);
             });
             console.log(objectsList);
@@ -381,96 +387,91 @@
 
         const messageDiv = document.querySelector(".spinner-wrapper .message");
         const spinnerWrapper = document.getElementById('spinner-wrapper');
-
-        //Generate Masks
-        document.getElementById('generate-button').addEventListener('click', function() {
-            checkStatus();
-            //spinnerWrapper.classList.add('active');
-            //spinnerWrapper.style.display = 'flex';
-            fetch('/generate_mask', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(objectsList)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    // Set the image source to the base64-encoded image returned by the backend
-                    img.src = `data:image/png;base64,${data.image_data}`;
-                    //spinnerWrapper.classList.remove('active');
-                    //spinnerWrapper.style.display = 'none';
-                } else {
-                    console.error('Failed to generate the mask:', data.message);
+    
+        function setupButtonListeners(){
+            console.log(objectsList);
+            //Generate Masks
+            document.getElementById('generate-button').addEventListener('click', async function() {
+                const objectsWithoutPoints = objectsList.filter(item => !item.points || item.points.length === 0);
+                if (objectsWithoutPoints.length > 0) {
+                    objectsWithoutPoints.forEach(obj => {
+                        alert(`Object with id ${obj.id} does not have any points.`);
+                        return;
+                    });
+                    return;
                 }
-            })
-            .catch(error => console.error('Error:', error));
-        });
-        
-        //Video Propagating
-        document.getElementById("video-propagation-button").addEventListener("click", async function () {
-            //spinnerWrapper.classList.add('active');
-            //spinnerWrapper.style.display = 'flex';
-            checkStatus();
-            try {
-
-                //Send request to propagate segmentation
-                const response = await fetch('/propagate_segmentation', {
+                showWaitWindow('Generating masks...');
+                fetch('/generate_mask', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify(objectsList)  // Assuming objectsData is your JSON data
+                    body: JSON.stringify(objectsList)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // Set the image source to the base64-encoded image returned by the backend
+                        img.src = `data:image/png;base64,${data.image_data}`;
+                        spinnerWrapper.style.display = 'none';
+                    } else {
+                        console.error('Failed to generate the mask:', data.message);
+                        //spinnerWrapper.style.display = 'none';
+                    }
+                })
+                .catch(error => console.error('Error:', error))
+                .finally(() => {
+                    hideWaitWindow(); // Hide spinner regardless of success or error
                 });
-                
-                const result = await response.json();
-                
-                if (result.status === 'success') {
-                    //spinnerWrapper.classList.remove('active');
-                    //spinnerWrapper.style.display = 'none';
-                    console.log("Segmentation propagated successfully!");
-                    img.innerHTML=''
-                    window.location.href = '/result';
-                } else {
-                    console.error("Error propagating segmentation:", result.message);
+            });
+            
+            //Video Propagating
+            document.getElementById("video-propagation-button").addEventListener("click", async function () {
+                const objectsWithoutPoints = objectsList.filter(item => !item.points || item.points.length === 0);
+                if (objectsWithoutPoints.length > 0) {
+                    objectsWithoutPoints.forEach(obj => {
+                        alert(`Object with id ${obj.id} does not have any points.`);
+                        return;
+                    });
+                    return;
                 }
-            } catch (error) {
-                console.error("Request failed:", error);
-            }
-        });
+                showWaitWindow('Propagating through video...');
+                console.log(objectsList);
+                try {
+                    //Send request to propagate segmentation
+                    const response = await fetch('/propagate_segmentation', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(objectsList)  // Assuming objectsData is your JSON data
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.status === 'success') {
+                        //spinnerWrapper.classList.remove('active');
+                        //spinnerWrapper.style.display = 'none';
+                        console.log("Segmentation propagated successfully!");
+                        img.innerHTML=''
+                        window.location.href = '/result';
+                    } else {
+                        console.error("Error propagating segmentation:", result.message);
+                    }
+                } catch (error) {
+                    console.error("Request failed:", error);
+                }
+                finally {
+                    hideWaitWindow(); // Hide spinner regardless of success or error
+                };
+            });
+        }
 
         //------------------------------------------------------------------------------------------------
         //------------------------------------------------------------------------------------------------
         //--------------------Help Functions--------------------------------------------------------------
         //------------------------------------------------------------------------------------------------
         //------------------------------------------------------------------------------------------------
-        //get status from backend and give back with effect to wait window
-        function checkStatus() {
-            fetch('/update_status')
-                .then(response => response.json())
-                .then(data => {
-                    messageDiv.textContent = data.message;
-                    setTimeout(() => {
-                        // Apply the waiting-effect class and clear the content for animation
-                        messageDiv.className = 'message waiting-effect';
-                        const text = data.message;
-                        console.log(text);
-                        // Clear the text content and wrap each character in a span
-                        messageDiv.innerHTML = '';
-                        for (let i = 0; i < text.length; i++) {
-                            const span = document.createElement('span');
-                            span.textContent = text[i];
-                            span.style.setProperty('--i', i);
-                            messageDiv.appendChild(span);
-                            console.log(i)
-                        }
-                    }, 10); // Delay in milliseconds
-                })
-                .catch(error => {
-                    console.error("Error checking status:", error);
-                });
-        }
 
         //Open thumbnails image
         function openImagePopup() {

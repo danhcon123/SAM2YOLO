@@ -340,7 +340,7 @@ class VideoSegmentation:
         """
         # Keep only frames with 'frame' < frame_id
         self.yolo_data = [entry for entry in self.yolo_data if entry['frame'] < frame_id]
-        print(f"yolo_data after got deleted from frame {frame_id}: ", self.yolo_data)
+        #print(f"yolo_data after got deleted from frame {frame_id}: ", self.yolo_data)
         #return self.yolo_data
     
     

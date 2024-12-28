@@ -354,7 +354,7 @@
         </div>
 
         <div class="buttons-container">
-            <button class="styled-button" onclick="exportData()">Export</button>
+            <button id="exportButton" class="styled-button" onclick="exportData()">Export</button>
         </div>
     </div>
 
@@ -457,8 +457,9 @@
         const global_objects = {{ global_objects|tojson }};
         console.log("global_objects", global_objects);
         let objectData = {};
-        
-        for (const obj in global_objects) {
+
+        for (const obj of global_objects) {
+            console.log("Processing object:", obj);
             const classIdInput = document.getElementById(`class_id_${obj.id}`);
             if (!classIdInput.value) {
                 alert('Please fill in all class IDs');
@@ -470,6 +471,12 @@
             };
         }
 
+        //Show loading state
+        const exportButton = document.querySelector('#exportButton'); //Add id="exportButton" to your button
+        const originalText = exportButton.innerHTML;
+        exportButton.innerHTML= 'Preparing Download...';
+        exportButton.disabled = true;
+        
         fetch('/update_objects', {
             method: 'POST',
             headers: {
@@ -480,15 +487,45 @@
                 objects: objectData,
             })
         })
-        .then(response => response.json())
-        .then(data => {
-            alert('Data exported successfully!');
+        .then(response => {
+            //Check the content type of the response
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/zip')) {
+                return response.blob();
+            } else {
+                return response.json().then(data => {
+                    throw new Error(data.message || 'Export failed');
+                });
+            }
+            
+        })
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${projectName}_dataset.zip`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+
+            // Reset button state
+            exportButton.innerHTML = originalText;
+            exportButton.disabled = false;
+
+            alert('Download complete!');
             hidePopup();
         })
+
         .catch(error => {
             console.error('Error:', error);
             alert('Error exporting data');
+
+            //Reset button state
+            exportButton.innerHTML = originalText;
+            exportButton.disabled = false;
         });
     }
+
     </script>
  {% endblock %}
