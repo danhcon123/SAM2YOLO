@@ -19,15 +19,13 @@ app.secret_key = '1234'
 #--------------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-print(BASE_DIR)
 # Construct paths relative to the base directory
 UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads')
 FRAME_FOLDER = os.path.join(BASE_DIR, 'static', 'frames')
 RENDERED_FRAME_FOLDER = os.path.join(BASE_DIR, 'static', 'rendered_frames')
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-'''
-#TODO: GIT and delete line 42
+
 # Get the SAM2 directory
 # Get the directory of the project (one level above SAM2YOLO)
 PROJECT_DIR = os.path.dirname(BASE_DIR)
@@ -35,11 +33,11 @@ PROJECT_DIR = os.path.dirname(BASE_DIR)
 CHECKPOINT_PATH = os.path.join(PROJECT_DIR, 'sam2', 'checkpoints', 'sam2.1_hiera_large.pt')
 # Normalize the path for the operating system
 checkpoint= os.path.normpath(CHECKPOINT_PATH)
-'''
+
 # Initialize the VideoSegmentation object globally
 status_message = ""
 model_cfg = "configs/sam2.1/sam2.1_hiera_l.yaml"
-checkpoint = "/home/gauva/sam2/checkpoints/sam2.1_hiera_large.pt" #DELETE
+#checkpoint = "/home/gauva/sam2/checkpoints/sam2.1_hiera_large.pt" #DELETE
 video_dir = FRAME_FOLDER
 objects = {1: {"class_id": ""},2: {"class_id": ""}}# Simulating a database of objects
 app.config['MAX_CONTENT_LENGTH'] = 1000 * 1024 * 1024 #1GB
