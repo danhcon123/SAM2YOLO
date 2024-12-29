@@ -1,1 +1,5 @@
 __pycache__
+horse_dataset
+static/frames/*
+static/rendered_frames/*
+static/upload/*

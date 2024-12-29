@@ -29,9 +29,8 @@ project_name_dataset/
 ├── label/
     └── ...
     └── project_name_300.txt
-```
-  
-                             
+```                
+
 
 ## Installation
 
@@ -69,6 +68,11 @@ cd SAM2YOLO
 5. Install requirements
 ```bash
 pip install -r requirements.txt
+```
+
+6. Set up project
+ ```bash
+python setup.py
 ```
 
 ## Run the project
