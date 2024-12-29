@@ -401,8 +401,28 @@
         }
     }
 
-    function backToHomePage(){
-        window.location.href = '/upload';
+    function backToHomePage() {
+        // Make an AJAX request to trigger cleanup
+        fetch('/cleanup', {
+            method: 'POST',
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            } else {
+                throw new Error('Failed to clean up');
+            }
+        })
+        .then(data => {
+            console.log(data.message); // Log the success message
+            // Redirect to the upload page
+            window.location.href = '/upload';
+        })
+        .catch(error => {
+            console.error('Error during cleanup:', error);
+            // Still redirect in case of an error
+            window.location.href = '/upload';
+        });
     }
 
     // Open the popup with the selected image

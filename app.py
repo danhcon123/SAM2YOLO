@@ -41,10 +41,10 @@ status_message = ""
 model_cfg = "configs/sam2.1/sam2.1_hiera_l.yaml"
 checkpoint = "/home/gauva/sam2/checkpoints/sam2.1_hiera_large.pt" #DELETE
 video_dir = FRAME_FOLDER
-global_objects = [] #Stores the object buttons for the not first time propagating
-objects = {1: {"class_id": ""},2: {"class_id": ""},3: {"class_id": ""},4: {"class_id": ""}}# Simulating a database of objects
+objects = {1: {"class_id": ""},2: {"class_id": ""}}# Simulating a database of objects
 app.config['MAX_CONTENT_LENGTH'] = 1000 * 1024 * 1024 #1GB
 global_bbox=[] #Store the bouding box in frame and object wise to give out the final YOLO's label data
+global_objects = [] #Stores the object buttons for the not first time propagating
 
 #Allowed file extensions (videos)
 ALLOWED_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv', 'webp', 'm4v'}
@@ -294,8 +294,13 @@ def get_objects():
 # Files you want to delete
 files_to_delete = ['static/uploads/output.mp4']
 directories_to_clean = ['static/frames', 'static/rendered_frames', 'static/uploads']
+
 # Function to delete files
 def cleanup_files():
+    global global_bbox
+    global global_objects
+    global_bbox=[]
+    global_objects=[]
     for file in files_to_delete:
         if os.path.exists(file):
             os.remove(file)
@@ -317,8 +322,15 @@ def cleanup_files():
                     print(f"Failed to delete {file_path}. Reason: {e}")
         else:
             print(f"Directory not found: {directory}")
-#Register the cleanup function to be called at program exit
-atexit.register(cleanup_files)
+
+# API endpoint to trigger cleanup
+@app.route('/cleanup', methods=['POST'])
+def trigger_cleanup():
+    try:
+        cleanup_files()
+        return jsonify({'message': 'Cleanup completed successfully'}), 200
+    except Exception as e:
+        return jsonify({'message': f'Cleanup failed: {str(e)}'}), 500
      
 @app.route('/favicon.ico')
 def favicon():
@@ -373,6 +385,8 @@ def update_objects():
             "message": str(e)
         }), 500
 
+#Register the cleanup function to be called at program exit
+atexit.register(cleanup_files)
 
 #--------------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------
