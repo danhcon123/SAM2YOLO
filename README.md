@@ -49,6 +49,15 @@ project/
         └── sam2.1_hiera_large.pt
 ```
 
+Create and activate virtual environment
+```bash
+python3 -m venv sam2
+```
+```bash
+source sam2/bin/activate
+```
+
+Install [Pytorch] (https://pytorch.org/get-started/locally/) match your CUDA Toolkit or CPU if not there are no CUDA
 Install requirements
 
 ```bash
@@ -58,34 +67,3 @@ pip install -r requirements.txt
 Follow the installation instructions for SAM2 provided in the official repository:
 
 https://github.com/facebookresearch/sam2"
-
-# TODO:
----
-
-## Frontend: 
-
-Home: == Upload
-
-Mask_Generating
-+ Loading screen
-+ Showed message + Effect
-+ Id update after the first loop
-+ The show coordination
-
-Result:
-+ Export button -> Yolo format (Boundingbox + Mask (Segmenting))
-
-## Backend:
-
-Mask_Generating
-+ Showed message 
-
-Result:
-+ The rendered video
-+ The showed rendered image should also include the image that's not been segmenting (the not looping through images)
-+ Export data method for training Yolo format (Boundingbox + Mask (Segmenting))
-    + Name of data
-    + Choosing export format
-    + Create File + export
-    + Download button
-    
