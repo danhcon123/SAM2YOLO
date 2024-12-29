@@ -1,21 +1,29 @@
 # 🚀 SAM2YOLO - Using SAM2 🤖 to generate labeled datas 🎞️ for training YOLO 🚀
 
 
-# Instruction
+# Introduction
 
-In the rapidly evolving field of computer vision, the acceleration of data labeling remains a critical challenge. 🎯 To address this, our project leverages SAM2.1 from Meta and YOLO from Ultralytics to streamline the annotation process for video data. By allowing users to input a video, our software automatically separates it into individual frames. Users can then effortlessly annotate objects by simply pointing, enabling the generation of bounding boxes that are intelligently propagated across the entire video using SAM2.1's advanced segmentation capabilities. 📹✨ The result is a set of accurately labeled images, ready to be used for training specialized object detection models with YOLO, significantly reducing the time and effort required for manual annotation. 🚀🔍
+
+In field of computer vision, the acceleration of data labeling remains a critical challenge. 🎯 To address this, my project leverages SAM2.1 from Meta to streamline the annotation process for video data. By allowing users to input a video, our software automatically separates it into individual frames.  
+
+Users can then effortlessly annotate objects by simply pointing, enabling the generation of bounding boxes that are intelligently propagated across the entire video using SAM2.1's advanced segmentation capabilities.  
+
+📹✨ The result is a set of accurately labeled images, ready to be used for training specialized object detection models with YOLO, significantly reducing the time and effort required for manual annotation. 🚀🔍  
+
 
 
 # Workflow
 
+
 ▶️ Uploading Video ->  
-▶️ Selecting Frame to Start Segmenting ->  
-▶️ Segmenting through create and identify objects ->  
-▶️ Pressing "Generating Maskes"-Button to check the generated maskes, if it is fitting expectation ->  
-▶️ Propagating through video ->  
-▶️ If Video not good, Choose a frame to edit the mask ->  
-▶️ Generating new video ->  
-▶️ Export in Video or YOLO-training data set format.
+▶️ Selecting Frame from seperated frames from video ->  
+▶️ Select the detected objects by placing a pointer on them ->  
+▶️ Press the 'Generate Masks' button to review the generated masks and verify they meet your expectations ->  
+▶️ Propagate the masks through the video ->  
+▶️ If one or more labeled frames are incorrect, select a frame to edit the mask ->  
+▶️ Generate new labeled data ->  
+▶️ Export the results in either video format or YOLO training dataset format.  
+
 
 
 # Installation
