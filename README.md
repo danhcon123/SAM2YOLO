@@ -31,6 +31,7 @@ project_name_dataset/
     └── project_name_300.txt
 ```                
 
+Follow [INSTRUCT.md](INSTRUCT.md) for more detailed information.
 
 ## Installation
 
