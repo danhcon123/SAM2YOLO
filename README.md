@@ -9,7 +9,7 @@ Users can then effortlessly annotate objects by simply pointing, enabling the ge
 
 📹✨ The result is a set of accurately labeled images, ready to be used for training specialized object detection models with YOLO, significantly reducing the time and effort required for manual annotation. 🚀🔍  
   
-  
+![Demo Screenshot](images/poster.png)
   
 ## Workflow
   
