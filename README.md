@@ -49,21 +49,25 @@ project/
         └── sam2.1_hiera_large.pt
 ```
   
-Create and activate virtual environment
+1. Create and activate virtual environment
 ```bash
 python3 -m venv sam2
 
 source sam2/bin/activate
 ```
-  
-Install [PyTorch](https://pytorch.org/get-started/locally/) based on your system's configuration. Match the installation with your CUDA Toolkit version if available. If CUDA is not installed, select the CPU-only version.
-  
-Install requirements
 
+2. Install [PyTorch](https://pytorch.org/get-started/locally/) based on your system's configuration. Match the installation with your CUDA Toolkit version if available. If CUDA is not installed, select the CPU-only version.
+
+3. Install SAM2.1 by following the [SAM2.1](https://github.com/facebookresearch/sam2/blob/main/INSTALL.md) Installation Guide provided in the linked GitHub repository.
+
+4. Clone this project's repository to match the structure of the project tree mentioned above:
+```bash
+git clone https://github.com/danhcon123/SAM2YOLO.git
+
+cd SAM2YOLO
+```
+
+5. Install requirements
 ```bash
 pip install -r requirements.txt
 ```
-
-Follow the installation instructions for SAM2 provided in the official repository:
-
-https://github.com/facebookresearch/sam2"
