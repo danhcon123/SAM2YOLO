@@ -52,11 +52,12 @@ project/
 Create and activate virtual environment
 ```bash
 python3 -m venv sam2
+
 source sam2/bin/activate
 ```
   
-Install [PyTorch](https://pytorch.org/get-started/locally/) based on your system's configuration. Match the installation with your CUDA Toolkit version if available. If CUDA is not installed, select the CPU-only version
-
+Install [PyTorch](https://pytorch.org/get-started/locally/) based on your system's configuration. Match the installation with your CUDA Toolkit version if available. If CUDA is not installed, select the CPU-only version.
+  
 Install requirements
 
 ```bash
