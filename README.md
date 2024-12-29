@@ -1,20 +1,20 @@
 # 🚀 SAM2YOLO - Using SAM2 🤖 to generate labeled datas 🎞️ for training YOLO 🚀
-
-
+  
+  
 # Introduction
-
-
+  
+  
 In field of computer vision, the acceleration of data labeling remains a critical challenge. 🎯 To address this, my project leverages SAM2.1 from Meta to streamline the annotation process for video data. By allowing users to input a video, our software automatically separates it into individual frames.  
 
 Users can then effortlessly annotate objects by simply pointing, enabling the generation of bounding boxes that are intelligently propagated across the entire video using SAM2.1's advanced segmentation capabilities.  
 
 📹✨ The result is a set of accurately labeled images, ready to be used for training specialized object detection models with YOLO, significantly reducing the time and effort required for manual annotation. 🚀🔍  
-
-
-
+  
+  
+  
 # Workflow
-
-
+  
+  
 ▶️ Uploading Video ->  
 ▶️ Selecting Frame from seperated frames from video ->  
 ▶️ Select the detected objects by placing a pointer on them ->  
@@ -23,13 +23,13 @@ Users can then effortlessly annotate objects by simply pointing, enabling the ge
 ▶️ If one or more labeled frames are incorrect, select a frame to edit the mask ->  
 ▶️ Generate new labeled data ->  
 ▶️ Export the results in either video format or YOLO training dataset format.  
-
-
-
+  
+  
+  
 # Installation
 
+  
 Project tree
-
 ```bash
 project/
 ├── SAM2YOLO/
