@@ -2,21 +2,14 @@
 
 {% block extra_head %}
     <style>
-        /* Container to position the video and the spinner */
-        .video-container {
-            position: relative;/* Make the video container the reference point for the spinner */
-            width: 640px;
-            height: 480px;
-            /*margin: 0 auto;  Center the video container on the page */
-        }
         /* Video upload form and video player positioned 60px below header */
         .video-section {
             display: flex;
             flex-direction: row;  /* Keep elements horizontal */
+            align-items: center;
             align-items: flex-start; /* Align items at the top */
             gap: 10px;  /* Reduced gap between video and buttons */
             font-family: 'Arial', sans-serif;
-            justify-content: center; /* Center the content */
             width: 100%; /* Take full width */
         }    
         /* Container for buttons and form */
@@ -29,7 +22,9 @@
        
         .buttons-column {
             display: flex;
-            flex-direction: column;  /* Stack buttons vertically */
+            margin-top: 7px;
+            align-items: center;
+            flex-direction: row;  /* Stack buttons vertically */
             gap: 10px;  /* Space between buttons */
             /*margin-top: 48px; /* Align with video by offsetting the h2 height */
         }
@@ -43,10 +38,26 @@
             margin-top: 0px;
             background-color: #000000;
         }
+
+        /* Style for video-content container */
         .video-content {
-            flex-shrink: 0; /* Prevent video content from shrinking */
+            width: 40%; /* Same width as Section 2 */
+            display: flex;
+            flex-direction: column; /* Stack items vertically */
+            justify-content: flex-start; /* Align items at the top */
+            align-items: center; /* Center items horizontally */
+            height: 100vh; /* Full viewport height */
+            text-align: center; /* Center text within the container */
         }
-    
+
+        /* Container to position the video and the spinner */
+        .video-container {
+            position: relative;/* Make the video container the reference point for the spinner */
+            width: 640px;
+            height: 480px;
+            /*margin: 0 auto;  Center the video container on the page */
+        }
+
         /* Main layout: 2 sections side by side */
         .container {
             display: flex;
@@ -60,7 +71,7 @@
  
         /* Section 1 - Thumbnails (Left) */
         .frame-section {
-            width: 100%; /* Same width as Section 2 */
+            width: 60%; /* Same width as Section 2 */
             background-color: #0097A7; /* Background color */
             border: 4px solid #036975; /* Same border as Section 2 */
             height: 100%; /* Take full height */
@@ -69,9 +80,8 @@
             box-sizing: border-box;
             /*margin-top: 20px !important; /* Force 20px space below video */        
         }
-
  
-        /* 4-column grid layout for thumbnails */
+        /* 5-column grid layout for thumbnails */
         .frame-container {
             display: grid;
             grid-template-columns: repeat(5, 1fr); /* 5 columns */
@@ -262,6 +272,18 @@
         input:invalid {
             border-color: #ff4444;
         }
+
+        .warning-container {
+        background-color: #ffcccb; /* Light red background */
+        color: #990000; /* Dark red text for emphasis */
+        border: 1px solid #ff0000; /* Red border for warning */
+        border-radius: 5px; /* Rounded corners */
+        padding: 10px; /* Add some space around the text */
+        margin: 20px auto; /* Center the warning container */
+        max-width: 600px; /* Limit the width */
+        font-size: 18px; /* Slightly larger text for emphasis */
+        text-align: center; /* Center-align the text */
+        }
         
     </style>
 {% endblock %}
@@ -271,93 +293,96 @@
     <h2>Display video with maskes</h2>
         <div class="video-section">
          <!-- Section 1: Thumbnails of all frames (4-column grid layout) -->
-         <div class="frame-section" id="frameSection">
-            <h2 style="color:white;">Frames</h2> <!-- Text color white to contrast with background -->
-            <div class="frame-container">
-                {% for frame in frames %}
-                <div class="frame-block" id="frameBlock{{ loop.index0 }}">
-                    <img src="{{ url_for('get_rendered_frame', filename=frame)}}" alt="Frame"
-                        onclick="openImagePopup('{{ frame }}', {{ loop.index0 }})">
-                    <p style="color:white;">{{ frame }}</p> <!-- Text color white -->
+            <div class="frame-section" id="frameSection">
+                <h2 style="color:white;">Frames</h2> <!-- Text color white to contrast with background -->
+                <div class="frame-container">
+                    {% for frame in frames %}
+                    <div class="frame-block" id="frameBlock{{ loop.index0 }}">
+                        <img src="{{ url_for('get_rendered_frame', filename=frame)}}" alt="Frame"
+                            onclick="openImagePopup('{{ frame }}', {{ loop.index0 }})">
+                        <p style="color:white;">{{ frame }}</p> <!-- Text color white -->
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="video-content">  <!-- Added class for video wrapper -->
+                <!-- Spinner Wrapper, which includes the spinner and the message -->
+                    <div class="video-container">
+                        <video id="uploadedVideo" width="640" height="480" controls>
+                            <source id="videoSource" src="{{ url_for('static', filename='uploads/output.mp4') }}" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                    </div>
+
+                    <!-- Export and Edit buttons -->       
+                    <div class="buttons-column">
+                        <button id="export-button" class="styled-button" onclick="showPopup()">Export</button>
+                        <button id="edit-button" class="styled-button" onclick="scrollToFrameSection()">Edit</button>
+                        <button id="home" class="styled-button" onclick="backToHomePage()">Home</button>
+                    </div>
+            </div>
+
+
+        <!-- Popup modal for showing selected image -->
+        <div id="imagePopup" class="image-popup" style="display:none;">
+            <div class="popup-content">
+                <span class="close-btn" onclick="closeImagePopup()">&times;</span>
+                <img id="popupImage" src="" alt="Selected Frame">
+                <div class="popup-buttons">
+                    <button id="prevBtn" onclick="showPreviousImage()">&#60;</button>
+                    <button id="editBtn" onclick="editImage()">Edit</button>
+                    <button id="nextBtn" onclick="showNextImage()">&#62;</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Popup modal for editing object's classes and export in YOLO-Data format-->
+        <div id="overlay" class="overlay"></div>
+        <div id="popup" class="popup">
+            <div class="popup-header">
+                <button class="close-button" onclick="hidePopup()">x</button>
+                <h2>Object Classification</h2>
+            </div>
+            
+            <div class="project-name">
+                <div class="form-group">
+                    <label>Project Name:</label>
+                    <input type="text" id="project_name" placeholder="Enter project name">
+                </div>
+            </div>
+
+            <div id="objects-container">
+                {% for obj in global_objects %}
+                <div class="object-row">
+                    <div class="object-id">
+                        <label>ID: {{ obj.id }}</label>
+                    </div>
+                    <div class="class-id-input">
+                        <input type="text" 
+                            id="class_id_{{ obj.id }}" 
+                            placeholder="Enter class ID"
+                            value="{{ objects[obj.id|string].class_id if objects[obj.id|string] else '' }}"
+                            pattern="[0-9]*"
+                            onkeypress="return event.charCode >= 48 && event.charCode <= 57"
+                            oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                            >
+                    </div>
+                    <div class="object-color" style="background-color: {{ obj.color }}"></div>
                 </div>
                 {% endfor %}
-            </div>
-        </div>
-        <div class="video-content">  <!-- Added class for video wrapper -->
-            <!-- Uploaded video player -->       
-            <!-- Spinner Wrapper, which includes the spinner and the message -->
-                <div class="video-container">
-                    <div id="spinner-wrapper" class="spinner-wrapper" style="display: none;">
-                        <div class="spinner"></div>        <!-- Loading spinner -->
-                        <div class="message">Frames analyzing, please wait...</div>
-                    </div>
-                    <video id="uploadedVideo" width="640" height="480" controls>
-                        <source id="videoSource" src="{{ url_for('static', filename='uploads/output.mp4') }}" type="video/mp4">
-                        Your browser does not support the video tag.
-                    </video>
-                </div>
-            <!-- Export and Edit buttons -->       
-                <div class="buttons-column">
-                    <button id="export-button" class="styled-button" onclick="showPopup()">Export</button>
-                    <button id="edit-button" class="styled-button" onclick="scrollToFrameSection()">Edit</button>
-                </div>
-            </div>
 
+            </div>
+            
+            <h3 id="warning-message" class="warning-container">
+                Warning: YOLO classes start from 0 and increment sequentially. Ensure your annotations follow this convention during export.
+            </h3>
 
-    <!-- Popup modal for showing selected image -->
-    <div id="imagePopup" class="image-popup" style="display:none;">
-        <div class="popup-content">
-            <span class="close-btn" onclick="closeImagePopup()">&times;</span>
-            <img id="popupImage" src="" alt="Selected Frame">
-            <div class="popup-buttons">
-                <button id="prevBtn" onclick="showPreviousImage()">&#60;</button>
-                <button id="editBtn" onclick="editImage()">Edit</button>
-                <button id="nextBtn" onclick="showNextImage()">&#62;</button>
+            <div class="buttons-container">
+                <button id="exportButton" class="styled-button" onclick="exportData()">Export</button>
             </div>
         </div>
     </div>
-
-    <!-- Popup modal for editing object's classes and export in YOLO-Data format-->
-    <div id="overlay" class="overlay"></div>
-    <div id="popup" class="popup">
-        <div class="popup-header">
-            <button class="close-button" onclick="hidePopup()">x</button>
-            <h2>Object Classification</h2>
-        </div>
-        
-        <div class="project-name">
-            <div class="form-group">
-                <label>Project Name:</label>
-                <input type="text" id="project_name" placeholder="Enter project name">
-            </div>
-        </div>
-
-        <div id="objects-container">
-            {% for obj in global_objects %}
-            <div class="object-row">
-                <div class="object-id">
-                    <label>ID: {{ obj.id }}</label>
-                </div>
-                <div class="class-id-input">
-                    <input type="text" 
-                           id="class_id_{{ obj.id }}" 
-                           placeholder="Enter class ID"
-                           value="{{ objects[obj.id|string].class_id if objects[obj.id|string] else '' }}"
-                           pattern="[0-9]*"
-                           onkeypress="return event.charCode >= 48 && event.charCode <= 57"
-                           oninput="this.value = this.value.replace(/[^0-9]/g, '')"
-                           >
-                </div>
-                <div class="object-color" style="background-color: {{ obj.color }}"></div>
-            </div>
-            {% endfor %}
-        </div>
-
-        <div class="buttons-container">
-            <button id="exportButton" class="styled-button" onclick="exportData()">Export</button>
-        </div>
-    </div>
-
 
     <script>
         const frames = [ {% for frame in frames %} "{{ frame }}", {% endfor %} ]; // List of frames
@@ -366,6 +391,7 @@
 
     // Scroll to the frame section
     function scrollToFrameSection() {
+        alert('Please select a image to keep editing!');
         const frameSection = document.getElementById('frameSection');
         if (frameSection) {
             frameSection.scrollIntoView({ 
@@ -373,6 +399,10 @@
                 block: 'start' 
             });
         }
+    }
+
+    function backToHomePage(){
+        window.location.href = '/upload';
     }
 
     // Open the popup with the selected image
