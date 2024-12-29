@@ -10,7 +10,7 @@ import atexit
 
 
 app = Flask(__name__)
-app.secret_key = '017643771350'
+app.secret_key = '1234'
 #--------------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------
@@ -87,7 +87,6 @@ def upload(): #Upload video
        
         #If file is allowed and has an appropiate extension
         if file and allowed_file(file.filename):
-            #session['status'] = "Uploading video and separating frames"
             filename = file.filename
             video_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(video_path) #Save the file to the uploaded folder
