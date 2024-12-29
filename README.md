@@ -22,8 +22,16 @@ Users can then effortlessly annotate objects by simply pointing, enabling the ge
 ▶️ Propagate the masks through the video ->  
 ▶️ If one or more labeled frames are incorrect, select a frame to edit the mask ->  
 ▶️ Generate new labeled data ->  
-▶️ Export the results in either video format or YOLO training dataset format.  
-  
+▶️ Export the results in YOLO training dataset format. 
+```bash
+project_name_dataset/
+├── images/
+    └──...
+    └── project_name_300.jpg
+├── label/
+    └── ...
+    └── project_name_300.txt
+```
   
   
 # Installation
